@@ -34,14 +34,14 @@ function stringifyOffset(t) {
 }
 
 function pointInZone(lat, lon, bounds, polygons) {
-  lat = Math.round(lat * 1000000)
-  lon = Math.round(lon * 1000000)
+  lat = Math.round((lat + 90) * 65535 / 180)
+  lon = Math.round((lon + 180) * 65535 / 360)
 
   /* Each timezone has a bounding box, in order to help speed up queries. */
-  if(lat < bounds.readInt32BE( 0) ||
-     lon < bounds.readInt32BE( 4) ||
-     lat > bounds.readInt32BE( 8) ||
-     lon > bounds.readInt32BE(12))
+  if(lat < bounds.readUInt16BE(0) ||
+     lon < bounds.readUInt16BE(2) ||
+     lat > bounds.readUInt16BE(4) ||
+     lon > bounds.readUInt16BE(6))
     return false
 
   var i = polygons.length,
@@ -50,15 +50,15 @@ function pointInZone(lat, lon, bounds, polygons) {
   while(i--) {
     polygon = polygons[i]
     inside  = false
-    lati    = polygon.readInt32BE(0)
-    loni    = polygon.readInt32BE(4)
+    lati    = polygon.readUInt16BE(0)
+    loni    = polygon.readUInt16BE(2)
     j       = polygon.length
 
     while(j) {
       lonj = loni
-      loni = polygon.readInt32BE(j -= 4)
+      loni = polygon.readUInt16BE(j -= 2)
       latj = lati
-      lati = polygon.readInt32BE(j -= 4)
+      lati = polygon.readUInt16BE(j -= 2)
 
       if(((loni <= lon && lon < lonj) || (lonj <= lon && lon < loni)) &&
          (lat - lati < (latj - lati) * (lon - loni) / (lonj - loni)))

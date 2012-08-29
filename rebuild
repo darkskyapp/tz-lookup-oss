@@ -9,10 +9,10 @@ var fs      = require("fs"),
 
 function pack(arr) {
   var i   = arr.length,
-      buf = new Buffer(i * 4)
+      buf = new Buffer(i * 2)
 
   while(i--)
-    buf.writeInt32BE(arr[i], i * 4)
+    buf.writeUInt16BE(arr[i], i * 2)
 
   return buf.toString("base64")
 }
@@ -47,17 +47,23 @@ fs.readFile(path.join(__dirname, "tz_world.json"), function(err, data) {
       coordinates = src[i].geometry.coordinates[j]
       polygon     = []
 
-      for(k = 0; k !== coordinates.length; ++k)
-        polygon.push(
-          Math.round(coordinates[k][1] * 1000000),
-          Math.round(coordinates[k][0] * 1000000)
-        )
+      for(k = 0; k !== coordinates.length; ++k) {
+        lat = Math.round((coordinates[k][1] +  90) * 65535 / 180)
+        lon = Math.round((coordinates[k][0] + 180) * 65535 / 360)
+
+        if(polygon.length === 0 ||
+           lat !== polygon[polygon.length - 2] ||
+           lon !== polygon[polygon.length - 1])
+          polygon.push(lat, lon)
+      }
 
       /* The input format duplicates the first and last vertex. There's no need
        * to, though, so I just get rid of them to save space. */
-      polygon.length -= 2
+      if(polygon.length >= 4 && polygon[0] === polygon[polygon.length - 2] && polygon[1] === polygon[polygon.length - 1])
+        polygon.length -= 2
 
-      dst[tzid].push(polygon)
+      if(polygon.length >= 6)
+        dst[tzid].push(polygon)
     }
   }
 
