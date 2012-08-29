@@ -8,14 +8,14 @@
     "time zone"
   ],
   "author" : {
-    "name": "J.T.L.",
-    "email": "ironwallaby@gmail.com"
+    "name" : "J.T.L.",
+    "email" : "ironwallaby@gmail.com"
   },
   "repository" : {
-    "type": "git",
-    "url": "git://github.com/ironwallaby/tz.git"
+    "type" : "git",
+    "url" : "git://github.com/ironwallaby/tz.git"
   },
-  "dependencies": {
+  "dependencies" : {
     "time" : "0.8.x"
   },
   "devDependencies" : {

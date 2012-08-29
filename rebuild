@@ -1,0 +1,104 @@
+#!/usr/bin/env node
+
+/* This program may be used to rebuild `tz.json` from `tz_world.json`. It
+ * expects `tz_world.json` to be in this directory. If you don't have it, you
+ * can download it from the `tzwhere` git repo (it's in `/lib`). */
+
+var fs      = require("fs"),
+    path    = require("path")
+
+function pack(arr) {
+  var i   = arr.length,
+      buf = new Buffer(i * 4)
+
+  while(i--)
+    buf.writeInt32BE(arr[i], i * 4)
+
+  return buf.toString("base64")
+}
+
+console.time("rebuild")
+
+fs.readFile(path.join(__dirname, "tz_world.json"), function(err, data) {
+  if(err)
+    throw err
+
+  var src = JSON.parse(data).features,
+      dst = {},
+      out = [],
+      i   = src.length,
+      tzid, coordinates, polygon, j, k, minlat, minlon, maxlat, maxlon, lat, lon
+
+  /* Find each polygon for each timezone. */
+  while(i--) {
+    if(src[i].type !== "Feature" ||
+       src[i].geometry.type !== "Polygon")
+      throw new Error("Invalid feature.")
+
+    /* Uninhabited locations should just use generic UTC offsets. */
+    tzid = src[i].properties.TZID
+    if(tzid === "uninhabited")
+      continue
+
+    if(!dst[tzid])
+      dst[tzid] = []
+
+    for(j = 0; j !== src[i].geometry.coordinates.length; ++j) {
+      coordinates = src[i].geometry.coordinates[j]
+      polygon     = []
+
+      for(k = 0; k !== coordinates.length; ++k)
+        polygon.push(
+          Math.round(coordinates[k][1] * 1000000),
+          Math.round(coordinates[k][0] * 1000000)
+        )
+
+      /* The input format duplicates the first and last vertex. There's no need
+       * to, though, so I just get rid of them to save space. */
+      polygon.length -= 2
+
+      dst[tzid].push(polygon)
+    }
+  }
+
+  for(tzid in dst) {
+    /* Find this timezone's bounding box. While we do that, pack each
+     * polygon. */
+    minlat = Number.POSITIVE_INFINITY
+    minlon = Number.POSITIVE_INFINITY
+    maxlat = Number.NEGATIVE_INFINITY
+    maxlon = Number.NEGATIVE_INFINITY
+    i = dst[tzid].length
+    while(i--) {
+      j = dst[tzid][i].length
+      while(j) {
+        lon = dst[tzid][i][--j]
+        lat = dst[tzid][i][--j]
+        minlat = Math.min(minlat, lat)
+        maxlat = Math.max(maxlat, lat)
+        minlon = Math.min(minlon, lon)
+        maxlon = Math.max(maxlon, lon)
+      }
+      dst[tzid][i] = pack(dst[tzid][i])
+    }
+
+    /* Add this timezone to the array. */
+    out.push(
+      tzid,
+      pack([minlat, minlon, maxlat, maxlon]),
+      dst[tzid]
+    )
+  }
+
+  /* Finally, write the new tz.json. */
+  fs.writeFile(
+    path.join(__dirname, "tz.json"),
+    JSON.stringify(out),
+    function(err) {
+      if(err)
+        throw err
+
+      console.timeEnd("rebuild")
+    }
+  )
+})
