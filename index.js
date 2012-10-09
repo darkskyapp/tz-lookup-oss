@@ -131,5 +131,21 @@ function lookup(lat, lon) {
   }
 }
 
+function getOffset(tz, lon) {
+  
+  // If given a lat/lon rather than a string, lookup the location
+  if(typeof tz == "number" && typeof lon == "number")
+    tz = lookup(tz, lon)
+  
+  var direction  = 44 - tz.charCodeAt(tz.length - 6),
+      hourTens   = tz.charCodeAt(tz.length - 5) - 48,
+      hourOnes   = tz.charCodeAt(tz.length - 4) - 48,
+      minuteTens = tz.charCodeAt(tz.length - 3) - 48,
+      minuteOnes = tz.charCodeAt(tz.length - 2) - 48
+
+  return direction * (hourTens * 10 + hourOnes + minuteTens / 6 + minuteOnes / 60)
+}
+
 unpack()
 module.exports = lookup
+module.exports.getOffset = getOffset
