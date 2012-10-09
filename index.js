@@ -132,7 +132,6 @@ function lookup(lat, lon) {
 }
 
 function getOffset(tz, lon) {
-  
   // If given a lat/lon rather than a string, lookup the location
   if(typeof tz == "number" && typeof lon == "number")
     tz = lookup(tz, lon)
@@ -147,5 +146,7 @@ function getOffset(tz, lon) {
 }
 
 unpack()
+/* FIXME: Modify the interface for these to require a callback and only load
+ * all the data on the first request. */
 module.exports = lookup
 module.exports.getOffset = getOffset
