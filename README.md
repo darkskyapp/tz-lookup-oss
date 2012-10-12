@@ -10,8 +10,13 @@ Usage
 -----
 
     > var tz = require("tz")
-    > tz(42.7235, -73.6931)
+    > tz.getTimezone(42.7235, -73.6931, function(err, string) {
+    >   console.log(string)
+    > })
     "America/New_York (EDT, -0400)"
 
-On my machine, `require` takes 900ms, while a timezone lookup takes about 35ms.
-These are adequate but can be further improved.
+The data file is only loaded on-demand, so the first call to `getTimezone()`
+will take a while, but subsequent calls will go quite quickly.
+
+If you only want the offset (in hours), you may call the similar method
+`getTimezoneOffset()`. Same arguments, different return value.
