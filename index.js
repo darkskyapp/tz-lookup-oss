@@ -143,6 +143,10 @@ function getTimezone(lat, lon, callback) {
   })
 }
 
+function getTzidFromString(str) {
+  return str.slice(0, str.indexOf(" "))
+}
+
 function getOffsetFromString(str) {
   var len        = str.length,
       dir        = 44 - str.charCodeAt(len - 6),
@@ -152,6 +156,49 @@ function getOffsetFromString(str) {
       minuteOnes = str.charCodeAt(len - 2) - 48
 
   return dir * (hourTens * 10 + hourOnes + minuteTens / 6 + minuteOnes / 60)
+}
+
+function parseTimestamp(timestamp, timezone) {
+  var date      = new time.Date(timestamp * 1000, getTzidFromString(timezone)),
+      year      = date.getFullYear(),
+      month     = date.getMonth(),
+      day       = date.getDate(),
+      hour      = date.getHours(),
+      minute    = date.getMinutes(),
+      second    = date.getSeconds(),
+      dayOfYear = day
+
+  switch(month) {
+    case  0: dayOfYear +=   0; break
+    case  1: dayOfYear +=  31; break
+    case  2: dayOfYear +=  59; break
+    case  3: dayOfYear +=  90; break
+    case  4: dayOfYear += 120; break
+    case  5: dayOfYear += 151; break
+    case  6: dayOfYear += 181; break
+    case  7: dayOfYear += 212; break
+    case  8: dayOfYear += 243; break
+    case  9: dayOfYear += 273; break
+    case 10: dayOfYear += 304; break
+    case 11: dayOfYear += 334; break
+  }
+
+  var secOfYear = second + minute * 60 + hour * 3600 + dayOfYear * 86400
+
+  /* FIXME: The consequences of the above is that Feb 29 is considered the same
+   * day as March 1st. Oh well? */
+
+  return {
+    year:         year,
+    month:        month,
+    day:          day,
+    hour:         hour,
+    minute:       minute,
+    second:       second,
+    dayOfYear:    dayOfYear,
+    hourOfYear:   Math.round(secOfYear / 3600),
+    offset:       getOffsetFromString(timezone)
+  }
 }
 
 function getTimezoneOffset(lat, lon, callback) {
@@ -166,3 +213,4 @@ function getTimezoneOffset(lat, lon, callback) {
 exports.getTimezone         = getTimezone
 exports.getOffsetFromString = getOffsetFromString
 exports.getTimezoneOffset   = getTimezoneOffset
+exports.parseTimestamp      = parseTimestamp

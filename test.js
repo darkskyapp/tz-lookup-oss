@@ -99,4 +99,23 @@ describe("tz", function() {
   check(51.003616, -114.016113, "America/Edmonton (MST, -0700)", "America/Edmonton (MDT, -0600)", -7, -6)
   check(-16.49649, -68.170166, "America/La_Paz (BOT, -0400)", null, -4)
   check(-31.936935, 115.845337, "Australia/Perth (WST, +0800)", null, 8)
+
+  describe("parseTimestamp", function() {
+    it("should return an object given a timezone and a unix timestamp", function() {
+      assert.deepEqual(
+        tz.parseTimestamp(1350319948, "America/New_York (EDT, -0400)"),
+        {
+          year:       2012,
+          month:         9,
+          day:          15,
+          hour:         12,
+          minute:       52,
+          second:       28,
+          dayOfYear:   288,
+          hourOfYear: 6925,
+          offset:       -4
+        }
+      )
+    })
+  })
 })
