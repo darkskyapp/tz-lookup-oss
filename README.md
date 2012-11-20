@@ -9,6 +9,12 @@ production setting. This module attempts to ameliorate that.
 Usage
 -----
 
+To install:
+
+    npm install tz-lookup
+
+To use:
+
     > var tz = require("tz-lookup")
     > tz.getTimezone(42.7235, -73.6931, function(err, string) {
     >   console.log(string)
