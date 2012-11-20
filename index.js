@@ -1,9 +1,9 @@
-var cache = require("cache"),
-    fs    = require("fs"),
-    path  = require("path"),
-    time  = require("time"),
-    util  = require("util"),
-    cacheZones = cache.once(function(callback) {
+var cacheHelpers = require("cache-helpers"),
+    fs           = require("fs"),
+    path         = require("path"),
+    time         = require("time"),
+    util         = require("util"),
+    cacheZones   = cacheHelpers.once(function(callback) {
       return fs.readFile(path.join(__dirname, "tz.json"), function(err, data) {
         if(err)
           return callback(err)

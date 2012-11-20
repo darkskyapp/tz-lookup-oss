@@ -93,7 +93,7 @@ describe("tz", function() {
   check(35.1991, -111.6348, "America/Phoenix (MST, -0700)", null, -7)
   check(43.1432, -115.6750, "America/Boise (MST, -0700)", "America/Boise (MDT, -0600)", -7, -6)
   check(47.5886, -122.3382, "America/Los_Angeles (PST, -0800)", "America/Los_Angeles (PDT, -0700)", -8, -7)
-  check(58.3168, -134.4397, "America/Juneau (AKST, -0700)", "America/Juneau (AKDT, -0800)", -7, -8)
+  check(58.3168, -134.4397, "America/Juneau (AKST, -0900)", "America/Juneau (AKDT, -0800)", -9, -8)
   check(21.4381, -158.0493, "Pacific/Honolulu (HST, -1000)", null, -10)
   check(42.7000,  -80.0000, "Etc/GMT+5 (GMT+5, -0500)", null, -5)
   check(51.003616, -114.016113, "America/Edmonton (MST, -0700)", "America/Edmonton (MDT, -0600)", -7, -6)

@@ -1,5 +1,5 @@
-tz
-==
+tz-lookup
+=========
 
 This is a little module that allows you to look up the current time zone of a
 location, given it's latitude and longitude. I wrote it because the existing
@@ -9,7 +9,7 @@ production setting. This module attempts to ameliorate that.
 Usage
 -----
 
-    > var tz = require("tz")
+    > var tz = require("tz-lookup")
     > tz.getTimezone(42.7235, -73.6931, function(err, string) {
     >   console.log(string)
     > })
