@@ -96,14 +96,23 @@ function getTimezone(lat, lon, callback) {
       tzid     = zones[--i]
 
       if(pointInZone(lat, lon, bounds, polygons)) {
-        now = new time.Date()
-        now.setTimezone(tzid)
-        return callback(null, util.format(
-          "%s (%s, %s)",
-          tzid,
-          now.getTimezoneAbbr(),
-          stringifyOffset(now.getTimezoneOffset())
-        ))
+        try {
+          now = new time.Date()
+          now.setTimezone(tzid)
+          return callback(null, util.format(
+            "%s (%s, %s)",
+            tzid,
+            now.getTimezoneAbbr(),
+            stringifyOffset(now.getTimezoneOffset())
+          ))
+        }
+
+        catch(e) {
+          /* If an error occurs (presumably from the time module, like if the
+           * given `tzid` doesn't exist in your system's database), just give
+           * up and use an Etc time, below. */
+          break
+        }
       }
     }
 
@@ -159,13 +168,14 @@ function getOffsetFromString(str) {
 }
 
 function parseTimestamp(timestamp, timezone) {
-  var date      = new time.Date(timestamp * 1000, getTzidFromString(timezone)),
-      year      = date.getFullYear(),
-      month     = date.getMonth(),
-      day       = date.getDate(),
-      hour      = date.getHours(),
-      minute    = date.getMinutes(),
-      second    = date.getSeconds(),
+  var offset = getOffsetFromString(timezone),
+      date   = new Date((timestamp + offset * 3600) * 1000),
+      year      = date.getUTCFullYear(),
+      month     = date.getUTCMonth(),
+      day       = date.getUTCDate(),
+      hour      = date.getUTCHours(),
+      minute    = date.getUTCMinutes(),
+      second    = date.getUTCSeconds(),
       dayOfYear = day
 
   switch(month) {
@@ -197,7 +207,7 @@ function parseTimestamp(timestamp, timezone) {
     second:       second,
     dayOfYear:    dayOfYear,
     hourOfYear:   Math.round(secOfYear / 3600),
-    offset:       getOffsetFromString(timezone)
+    offset:       offset
   }
 }
 
