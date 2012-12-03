@@ -28,18 +28,6 @@ var cacheHelpers = require("cache-helpers"),
       })
     })
 
-function stringifyOffset(t) {
-  var abs = Math.abs(t)
-
-  return String.fromCharCode.apply(null, [
-    t > 0 ? 45 : 43,
-    48 + Math.floor(abs / 600) % 10,
-    48 + Math.floor(abs /  60) % 10,
-    48 + Math.floor(abs /  10) %  6,
-    48 +            abs        % 10
-  ])
-}
-
 function pointInZone(lat, lon, bounds, polygons) {
   lat = Math.round((lat + 90) * 65535 / 180)
   lon = Math.round((lon + 180) * 65535 / 360)
@@ -79,7 +67,7 @@ function pointInZone(lat, lon, bounds, polygons) {
   return false
 }
 
-function getTimezone(lat, lon, callback) {
+module.exports = function(lat, lon, callback) {
   return cacheZones(function(err, zones) {
     if(err)
       return callback(err)
@@ -99,12 +87,6 @@ function getTimezone(lat, lon, callback) {
         try {
           now = new time.Date()
           now.setTimezone(tzid)
-          return callback(null, util.format(
-            "%s (%s, %s)",
-            tzid,
-            now.getTimezoneAbbr(),
-            stringifyOffset(now.getTimezoneOffset())
-          ))
         }
 
         catch(e) {
@@ -113,6 +95,12 @@ function getTimezone(lat, lon, callback) {
            * up and use an Etc time, below. */
           break
         }
+
+        return callback(null, {
+          tzid:   tzid,
+          abbr:   now.getTimezoneAbbr(),
+          offset: now.getTimezoneOffset() / -60
+        })
       }
     }
 
@@ -123,59 +111,31 @@ function getTimezone(lat, lon, callback) {
      * If the codes seem backwards, it's because they are backwards by design.
      * See also: ftp://ftp.iana.org/tz/data/etcetera */
     switch(Math.round((lon + 180) / 15)) {
-      case  0: return callback(null, "Etc/GMT+12 (GMT+12, -1200)")
-      case  1: return callback(null, "Etc/GMT+11 (GMT+11, -1100)")
-      case  2: return callback(null, "Etc/GMT+10 (GMT+10, -1000)")
-      case  3: return callback(null, "Etc/GMT+9 (GMT+9, -0900)")
-      case  4: return callback(null, "Etc/GMT+8 (GMT+8, -0800)")
-      case  5: return callback(null, "Etc/GMT+7 (GMT+7, -0700)")
-      case  6: return callback(null, "Etc/GMT+6 (GMT+6, -0600)")
-      case  7: return callback(null, "Etc/GMT+5 (GMT+5, -0500)")
-      case  8: return callback(null, "Etc/GMT+4 (GMT+4, -0400)")
-      case  9: return callback(null, "Etc/GMT+3 (GMT+3, -0300)")
-      case 10: return callback(null, "Etc/GMT+2 (GMT+2, -0200)")
-      case 11: return callback(null, "Etc/GMT+1 (GMT+1, -0100)")
-      case 12: return callback(null, "Etc/GMT (GMT, +0000)")
-      case 13: return callback(null, "Etc/GMT-1 (GMT-1, +0100)")
-      case 14: return callback(null, "Etc/GMT-2 (GMT-2, +0200)")
-      case 15: return callback(null, "Etc/GMT-3 (GMT-3, +0300)")
-      case 16: return callback(null, "Etc/GMT-4 (GMT-4, +0400)")
-      case 17: return callback(null, "Etc/GMT-5 (GMT-5, +0500)")
-      case 18: return callback(null, "Etc/GMT-6 (GMT-6, +0600)")
-      case 19: return callback(null, "Etc/GMT-7 (GMT-7, +0700)")
-      case 20: return callback(null, "Etc/GMT-8 (GMT-8, +0800)")
-      case 21: return callback(null, "Etc/GMT-9 (GMT-9, +0900)")
-      case 22: return callback(null, "Etc/GMT-10 (GMT-10, +1000)")
-      case 23: return callback(null, "Etc/GMT-11 (GMT-11, +1100)")
-      case 24: return callback(null, "Etc/GMT-12 (GMT-12, +1200)")
+      case  0: return callback(null, {tzid: "Etc/GMT+12", offset: -12})
+      case  1: return callback(null, {tzid: "Etc/GMT+11", offset: -11})
+      case  2: return callback(null, {tzid: "Etc/GMT+10", offset: -10})
+      case  3: return callback(null, {tzid:  "Etc/GMT+9", offset:  -9})
+      case  4: return callback(null, {tzid:  "Etc/GMT+8", offset:  -8})
+      case  5: return callback(null, {tzid:  "Etc/GMT+7", offset:  -7})
+      case  6: return callback(null, {tzid:  "Etc/GMT+6", offset:  -6})
+      case  7: return callback(null, {tzid:  "Etc/GMT+5", offset:  -5})
+      case  8: return callback(null, {tzid:  "Etc/GMT+4", offset:  -4})
+      case  9: return callback(null, {tzid:  "Etc/GMT+3", offset:  -3})
+      case 10: return callback(null, {tzid:  "Etc/GMT+2", offset:  -2})
+      case 11: return callback(null, {tzid:  "Etc/GMT+1", offset:  -1})
+      case 12: return callback(null, {tzid:    "Etc/GMT", offset:   0})
+      case 13: return callback(null, {tzid:  "Etc/GMT-1", offset:   1})
+      case 14: return callback(null, {tzid:  "Etc/GMT-2", offset:   2})
+      case 15: return callback(null, {tzid:  "Etc/GMT-3", offset:   3})
+      case 16: return callback(null, {tzid:  "Etc/GMT-4", offset:   4})
+      case 17: return callback(null, {tzid:  "Etc/GMT-5", offset:   5})
+      case 18: return callback(null, {tzid:  "Etc/GMT-6", offset:   6})
+      case 19: return callback(null, {tzid:  "Etc/GMT-7", offset:   7})
+      case 20: return callback(null, {tzid:  "Etc/GMT-8", offset:   8})
+      case 21: return callback(null, {tzid:  "Etc/GMT-9", offset:   9})
+      case 22: return callback(null, {tzid: "Etc/GMT-10", offset:  10})
+      case 23: return callback(null, {tzid: "Etc/GMT-11", offset:  11})
+      case 24: return callback(null, {tzid: "Etc/GMT-12", offset:  12})
     }
   })
 }
-
-function getTzidFromString(str) {
-  return str.slice(0, str.indexOf(" "))
-}
-
-function getOffsetFromString(str) {
-  var len        = str.length,
-      dir        = 44 - str.charCodeAt(len - 6),
-      hourTens   = str.charCodeAt(len - 5) - 48,
-      hourOnes   = str.charCodeAt(len - 4) - 48,
-      minuteTens = str.charCodeAt(len - 3) - 48,
-      minuteOnes = str.charCodeAt(len - 2) - 48
-
-  return dir * (hourTens * 10 + hourOnes + minuteTens / 6 + minuteOnes / 60)
-}
-
-function getTimezoneOffset(lat, lon, callback) {
-  return getTimezone(lat, lon, function(err, str) {
-    if(err)
-      return callback(err)
-
-    return callback(null, getOffsetFromString(str))
-  })
-}
-
-exports.getTimezone         = getTimezone
-exports.getOffsetFromString = getOffsetFromString
-exports.getTimezoneOffset   = getTimezoneOffset

@@ -15,14 +15,11 @@ To install:
 
 To use:
 
-    > var tz = require("tz-lookup")
-    > tz.getTimezone(42.7235, -73.6931, function(err, string) {
-    >   console.log(string)
+    > var tzLookup = require("tz-lookup")
+    > tzLookup(42.7235, -73.6931, function(err, tz) {
+    >   console.log(tz)
     > })
-    "America/New_York (EDT, -0400)"
+    { tzid: "America/New_York", abbr: "EDT", offset: -4 }
 
-The data file is only loaded on-demand, so the first call to `getTimezone()`
+The data file is only loaded on-demand, so the first call to `tzLookup()`
 will take a while, but subsequent calls will go quite quickly.
-
-If you only want the offset (in hours), you may call the similar method
-`getTimezoneOffset()`. Same arguments, different return value.
