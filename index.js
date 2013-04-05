@@ -1,7 +1,6 @@
 var cacheHelpers = require("cache-helpers"),
     fs           = require("fs"),
     path         = require("path"),
-    time         = require("time"),
     util         = require("util"),
     cacheZones   = cacheHelpers.once(function(callback) {
       return fs.readFile(path.join(__dirname, "tz.json"), function(err, data) {
@@ -83,25 +82,8 @@ module.exports = function(lat, lon, callback) {
       bounds   = zones[--i]
       tzid     = zones[--i]
 
-      if(pointInZone(lat, lon, bounds, polygons)) {
-        try {
-          now = new time.Date()
-          now.setTimezone(tzid)
-        }
-
-        catch(e) {
-          /* If an error occurs (presumably from the time module, like if the
-           * given `tzid` doesn't exist in your system's database), just give
-           * up and use an Etc time, below. */
-          break
-        }
-
-        return callback(null, {
-          tzid:   tzid,
-          abbr:   now.getTimezoneAbbr(),
-          offset: now.getTimezoneOffset() / -60
-        })
-      }
+      if(pointInZone(lat, lon, bounds, polygons))
+        return callback(null, tzid);
     }
 
     /* If we can't find the place we were looking for, assume (fairly
@@ -111,31 +93,31 @@ module.exports = function(lat, lon, callback) {
      * If the codes seem backwards, it's because they are backwards by design.
      * See also: ftp://ftp.iana.org/tz/data/etcetera */
     switch(Math.round((lon + 180) / 15)) {
-      case  0: return callback(null, {tzid: "Etc/GMT+12", offset: -12})
-      case  1: return callback(null, {tzid: "Etc/GMT+11", offset: -11})
-      case  2: return callback(null, {tzid: "Etc/GMT+10", offset: -10})
-      case  3: return callback(null, {tzid:  "Etc/GMT+9", offset:  -9})
-      case  4: return callback(null, {tzid:  "Etc/GMT+8", offset:  -8})
-      case  5: return callback(null, {tzid:  "Etc/GMT+7", offset:  -7})
-      case  6: return callback(null, {tzid:  "Etc/GMT+6", offset:  -6})
-      case  7: return callback(null, {tzid:  "Etc/GMT+5", offset:  -5})
-      case  8: return callback(null, {tzid:  "Etc/GMT+4", offset:  -4})
-      case  9: return callback(null, {tzid:  "Etc/GMT+3", offset:  -3})
-      case 10: return callback(null, {tzid:  "Etc/GMT+2", offset:  -2})
-      case 11: return callback(null, {tzid:  "Etc/GMT+1", offset:  -1})
-      case 12: return callback(null, {tzid:    "Etc/GMT", offset:   0})
-      case 13: return callback(null, {tzid:  "Etc/GMT-1", offset:   1})
-      case 14: return callback(null, {tzid:  "Etc/GMT-2", offset:   2})
-      case 15: return callback(null, {tzid:  "Etc/GMT-3", offset:   3})
-      case 16: return callback(null, {tzid:  "Etc/GMT-4", offset:   4})
-      case 17: return callback(null, {tzid:  "Etc/GMT-5", offset:   5})
-      case 18: return callback(null, {tzid:  "Etc/GMT-6", offset:   6})
-      case 19: return callback(null, {tzid:  "Etc/GMT-7", offset:   7})
-      case 20: return callback(null, {tzid:  "Etc/GMT-8", offset:   8})
-      case 21: return callback(null, {tzid:  "Etc/GMT-9", offset:   9})
-      case 22: return callback(null, {tzid: "Etc/GMT-10", offset:  10})
-      case 23: return callback(null, {tzid: "Etc/GMT-11", offset:  11})
-      case 24: return callback(null, {tzid: "Etc/GMT-12", offset:  12})
+      case  0: return callback(null, "Etc/GMT+12")
+      case  1: return callback(null, "Etc/GMT+11")
+      case  2: return callback(null, "Etc/GMT+10")
+      case  3: return callback(null,  "Etc/GMT+9")
+      case  4: return callback(null,  "Etc/GMT+8")
+      case  5: return callback(null,  "Etc/GMT+7")
+      case  6: return callback(null,  "Etc/GMT+6")
+      case  7: return callback(null,  "Etc/GMT+5")
+      case  8: return callback(null,  "Etc/GMT+4")
+      case  9: return callback(null,  "Etc/GMT+3")
+      case 10: return callback(null,  "Etc/GMT+2")
+      case 11: return callback(null,  "Etc/GMT+1")
+      case 12: return callback(null,    "Etc/GMT")
+      case 13: return callback(null,  "Etc/GMT-1")
+      case 14: return callback(null,  "Etc/GMT-2")
+      case 15: return callback(null,  "Etc/GMT-3")
+      case 16: return callback(null,  "Etc/GMT-4")
+      case 17: return callback(null,  "Etc/GMT-5")
+      case 18: return callback(null,  "Etc/GMT-6")
+      case 19: return callback(null,  "Etc/GMT-7")
+      case 20: return callback(null,  "Etc/GMT-8")
+      case 21: return callback(null,  "Etc/GMT-9")
+      case 22: return callback(null, "Etc/GMT-10")
+      case 23: return callback(null, "Etc/GMT-11")
+      case 24: return callback(null, "Etc/GMT-12")
     }
   })
 }

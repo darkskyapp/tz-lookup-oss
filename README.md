@@ -19,7 +19,7 @@ To use:
     > tzLookup(42.7235, -73.6931, function(err, tz) {
     >   console.log(tz)
     > })
-    { tzid: "America/New_York", abbr: "EDT", offset: -4 }
+    "America/New_York"
 
 The data file is only loaded on-demand, so the first call to `tzLookup()`
 will take a while, but subsequent calls will go quite quickly.
