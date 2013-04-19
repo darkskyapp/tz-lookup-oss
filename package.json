@@ -1,0 +1,21 @@
+{
+  "name": "tz-lookup",
+  "version": "5.0.0",
+  "description": "time zone lookup",
+  "keywords": [
+    "tz",
+    "timezone",
+    "time zone"
+  ],
+  "author": {
+    "name": "The Dark Sky Company",
+    "email": "devsupport@darkskyapp.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/darkskyapp/tz-lookup.git"
+  },
+  "devDependencies": {
+    "jasmine-node": "1.7.x"
+  },
+}
