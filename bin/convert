@@ -1,0 +1,106 @@
+#!/usr/bin/env node
+
+var fs       = require("fs"),
+    Geometry = require("../lib/geometry"),
+    path     = require("path"),
+    zlib     = require("zlib"),
+    WIDTH    = 48 * 4,
+    HEIGHT   = WIDTH * 0.5,
+    buckets  = new Array(WIDTH * HEIGHT);
+
+function rectangle(x, y) {
+  var left   = (x + 0) * 360 / WIDTH - 180,
+      top    = 90 - (y + 0) * 180 / HEIGHT,
+      right  = (x + 1) * 360 / WIDTH - 180,
+      bottom = 90 - (y + 1) * 180 / HEIGHT;
+
+  return [left, top, right, top, right, bottom, left, bottom];
+}
+
+function canonicalize(poly) {
+  var copy = new Array(poly.length),
+      i, j;
+
+  for(i = 0; i !== poly.length; ++i) {
+    copy[i] = [];
+
+    /* Flatten the input array. */
+    for(j = 0; j !== poly[i].length; ++j) {
+      /* Sanity check. */
+      if(!Array.isArray(poly[i][j]) || poly[i][j].length !== 2)
+        throw new Error("input was in an unexpected format");
+
+      copy[i].push(poly[i][j][0], poly[i][j][1]);
+    }
+
+    /* Treat polygons as cyclic. */
+    if(copy[i][0] === copy[i][copy[i].length - 2] &&
+       copy[i][1] === copy[i][copy[i].length - 1])
+      copy[i].length -= 2;
+
+    /* Sanity check. */
+    if(copy[i].length < 6)
+      throw new Error("too few vertices for a polygon");
+  }
+
+  /* Remove holes (if applicable). */
+  if(copy.length !== 1)
+    throw new Error("not ready for hole removal yet");
+
+  return copy[0];
+}
+
+function feature(feature) {
+  if(!feature.properties ||
+     !feature.properties.TZID ||
+     !feature.geometry ||
+     feature.geometry.type !== "Polygon" ||
+     !feature.geometry.coordinates)
+    throw new Error("invalid feature");
+
+  var tzid = feature.properties.TZID,
+      poly = canonicalize(feature.geometry.coordinates),
+      x, y, rect;
+
+  console.log(tzid, poly.length / 2);
+
+  for(y = 0; y !== HEIGHT; ++y) {
+    for(x = 0; x !== WIDTH; ++x) {
+      rect = rectangle(x, y);
+
+      if(Geometry.overlap.polygon.polygon(poly, rect)) {
+        if(!buckets[y * WIDTH + x])
+          buckets[y * WIDTH + x] = {};
+
+        if(!buckets[y * WIDTH + x][tzid])
+          buckets[y * WIDTH + x][tzid] = [];
+
+        buckets[y * WIDTH + x][tzid].push(poly);
+
+        console.log("%s added to bucket %d,%d", tzid, x, y);
+      }
+    }
+  }
+}
+
+fs.readFile(
+  path.join(__dirname, "../data/tz_world.json.gz"),
+  function(err, data) {
+    if(err)
+      throw err;
+
+    zlib.gunzip(data, function(err, data) {
+      if(err)
+        throw err;
+
+      var i;
+
+      data = JSON.parse(data.toString("utf8")).features;
+
+      for(i = 0; i !== data.length; ++i)
+        feature(data[i]);
+
+      console.log("DONE");
+    });
+  }
+);
