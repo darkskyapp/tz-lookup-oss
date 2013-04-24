@@ -4,8 +4,8 @@ var fs       = require("fs"),
     Geometry = require("../lib/geometry"),
     path     = require("path"),
     zlib     = require("zlib"),
-    WIDTH    = 48 * 4,
-    HEIGHT   = WIDTH * 0.5,
+    WIDTH    = 128,
+    HEIGHT   = 64,
     buckets  = new Array(WIDTH * HEIGHT);
 
 function rectangle(x, y) {
@@ -14,7 +14,7 @@ function rectangle(x, y) {
       right  = (x + 1) * 360 / WIDTH - 180,
       bottom = 90 - (y + 1) * 180 / HEIGHT;
 
-  return [left, top, right, top, right, bottom, left, bottom];
+  return [left, bottom, right, top];
 }
 
 function canonicalize(poly) {
@@ -67,16 +67,19 @@ function feature(feature) {
   if(tzid === "uninhabited")
     return;
 
-  var poly = canonicalize(feature.geometry.coordinates),
+  var poly  = canonicalize(feature.geometry.coordinates),
+      bbox  = Geometry.convert.polygon.box(poly),
+      count = 0,
       x, y, rect;
 
-  console.log(tzid, poly.length / 2);
+  console.log(tzid);
 
   for(y = 0; y !== HEIGHT; ++y) {
     for(x = 0; x !== WIDTH; ++x) {
       rect = rectangle(x, y);
 
-      if(Geometry.overlap.polygon.polygon(poly, rect)) {
+      if(Geometry.overlap.box.box(bbox, rect) &&
+         Geometry.overlap.polygon.box(poly, rect)) {
         if(!buckets[y * WIDTH + x])
           buckets[y * WIDTH + x] = {};
 
@@ -84,11 +87,13 @@ function feature(feature) {
           buckets[y * WIDTH + x][tzid] = [];
 
         buckets[y * WIDTH + x][tzid].push(poly);
-
-        console.log("%s added to bucket %d,%d", tzid, x, y);
+        ++count;
       }
     }
   }
+
+  if(count === 0)
+    throw new Error(tzid + " didn't overlap any boxes (this is a bug)");
 }
 
 fs.readFile(
@@ -108,7 +113,29 @@ fs.readFile(
       for(i = 0; i !== data.length; ++i)
         feature(data[i]);
 
+      var empty  = 0,
+          single = 0,
+          total  = 0,
+          key, keys;
+
+      for(i = buckets.length; i--; ) {
+        ++total;
+
+        if(!buckets[i]) {
+          ++empty;
+          continue;
+        }
+
+        keys = 0;
+        for(key in buckets[i])
+          ++keys;
+
+        if(keys === 1)
+          ++single;
+      }
+
       console.log("DONE");
+      console.log(empty, single, total);
     });
   }
 );
