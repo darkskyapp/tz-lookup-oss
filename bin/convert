@@ -22,6 +22,9 @@ function canonicalize(poly) {
       i, j;
 
   for(i = 0; i !== poly.length; ++i) {
+    if(poly[i].length === 0)
+      throw new Error("input was in an unexpected format");
+
     copy[i] = [];
 
     /* Flatten the input array. */
@@ -44,8 +47,8 @@ function canonicalize(poly) {
   }
 
   /* Remove holes (if applicable). */
-  if(copy.length !== 1)
-    throw new Error("not ready for hole removal yet");
+  for(i = 1; i !== copy.length; ++i)
+    copy[0] = Geometry.remove.polygon.polygon(copy[0], copy[i]);
 
   return copy[0];
 }
@@ -58,8 +61,13 @@ function feature(feature) {
      !feature.geometry.coordinates)
     throw new Error("invalid feature");
 
-  var tzid = feature.properties.TZID,
-      poly = canonicalize(feature.geometry.coordinates),
+  var tzid = feature.properties.TZID;
+
+  /* Skip uninhabited polygons entirely. */
+  if(tzid === "uninhabited")
+    return;
+
+  var poly = canonicalize(feature.geometry.coordinates),
       x, y, rect;
 
   console.log(tzid, poly.length / 2);
