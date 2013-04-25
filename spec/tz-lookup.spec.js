@@ -2,7 +2,7 @@ describe("tz-lookup", function() {
   var lookup = require("../");
 
   function test(lat, lon, tzid) {
-    it("should return \"" + tzid + "\" given " + lat + "," + lon, function(done) {
+    it("should return \"" + tzid + "\" given " + lat + ", " + lon, function(done) {
       lookup(lat, lon, function(err, timezone) {
         if(err)
           return done(err);
@@ -464,7 +464,7 @@ describe("tz-lookup", function() {
   test(19.2194, 19.0398, "Africa/Ndjamena");
   test(84.1433, 110.0979, "Etc/GMT-7");
   test(22.4242, 146.5106, "Etc/GMT-10");
-  test(5.0789, 34.1745, "Africa/Khartoum");
+  test(5.0789, 34.1745, "Africa/Juba");
   test(-0.9584, -49.4351, "America/Belem");
   test(57.1181, 69.5137, "Asia/Yekaterinburg");
   test(74.9076, 135.4116, "Etc/GMT-9");
@@ -473,7 +473,7 @@ describe("tz-lookup", function() {
   test(-28.4158, 60.0514, "Etc/GMT-4");
   test(-87.6453, 5.4824, "Etc/GMT");
   test(80.8535, 114.0859, "Etc/GMT-8");
-  test(9.0181, 27.4099, "Africa/Khartoum");
+  test(9.0181, 27.4099, "Africa/Juba");
   test(-67.7483, -86.2001, "Etc/GMT+6");
   test(34.3893, 16.5065, "Etc/GMT-1");
   test(11.9072, 13.9995, "Africa/Lagos");
@@ -1458,7 +1458,7 @@ describe("tz-lookup", function() {
   test(-53.2273, -158.2923, "Etc/GMT+11");
   test(-53.0973, -128.2275, "Etc/GMT+9");
   test(-17.0907, 118.6095, "Etc/GMT-8");
-  test(6.0803, 33.7236, "Africa/Khartoum");
+  test(6.0803, 33.7236, "Africa/Juba");
   test(58.7861, -23.0571, "Etc/GMT+2");
   test(85.5213, -61.424, "Etc/GMT+4");
   test(1.3313, -146.8096, "Etc/GMT+10");
@@ -1853,7 +1853,7 @@ describe("tz-lookup", function() {
   test(34.1233, 163.8765, "Etc/GMT-11");
   test(-50.7374, 113.8433, "Etc/GMT-8");
   test(-57.0372, 168.8475, "Etc/GMT-11");
-  test(5.2829, 35.5583, "Africa/Khartoum");
+  test(5.2829, 35.5583, "Africa/Juba");
   test(87.3868, 78.439, "Etc/GMT-5");
   test(-18.9142, -142.673, "Etc/GMT+10");
   test(-26.0594, 86.4915, "Etc/GMT-6");
