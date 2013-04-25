@@ -17,5 +17,5 @@
   },
   "devDependencies": {
     "jasmine-node": "1.7.x"
-  },
+  }
 }

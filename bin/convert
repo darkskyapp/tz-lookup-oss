@@ -96,6 +96,24 @@ function feature(feature) {
     throw new Error(tzid + " didn't overlap any boxes (this is a bug)");
 }
 
+function collapse() {
+  var i, key, can;
+
+  loop: for(i = buckets.length; i--; ) {
+    key = undefined;
+    for(can in buckets[i])
+      if(buckets[i].hasOwnProperty(can)) {
+        if(key)
+          continue loop;
+
+        else
+          key = can;
+      }
+
+    buckets[i] = key;
+  }
+}
+
 fs.readFile(
   path.join(__dirname, "../data/tz_world.json.gz"),
   function(err, data) {
@@ -106,14 +124,58 @@ fs.readFile(
       if(err)
         throw err;
 
+      /* Read the data into buckets. */
       var i;
-
       data = JSON.parse(data.toString("utf8")).features;
-
       for(i = 0; i !== data.length; ++i)
         feature(data[i]);
 
-      console.log("DONE");
+      /* Write the results to disk. */
+      i = buckets.length;
+      function next(err) {
+        var count, key, tzid, out, rect, j;
+
+        if(err)
+          throw err;
+
+        while(i--) {
+          if(!buckets[i])
+            continue;
+
+          count = 0;
+          for(key in buckets[i])
+            if(buckets.hasOwnProperty(key)) {
+              tzid = key;
+              ++count;
+            }
+
+          if(count === 1)
+            out = tzid;
+
+          else {
+            out  = [];
+            rect = Geometry.convert.box.polygon(rectangle(i % WIDTH, Math.floor(i / WIDTH)));
+
+            for(key in buckets[i])
+              for(j = 0; j !== buckets[i][key].length; ++j)
+                out.push(
+                  key,
+                  Geometry.clip.polygon.polygon(buckets[i][key][j], rect)
+                );
+          }
+
+          return zlib.gzip(JSON.stringify(out), function(err, data) {
+            if(err)
+              throw err;
+
+            fs.writeFile(path.join(__dirname, "../data", i + ".json.gz"), data, next);
+          });
+        }
+
+        console.log("DONE");
+      }
+
+      next();
     });
   }
 );
