@@ -4,8 +4,8 @@ var fs       = require("fs"),
     Geometry = require("../lib/geometry"),
     path     = require("path"),
     zlib     = require("zlib"),
-    WIDTH    = 128,
-    HEIGHT   = 64,
+    WIDTH    = 64,
+    HEIGHT   = 32,
     buckets  = new Array(WIDTH * HEIGHT);
 
 function rectangle(x, y) {
@@ -113,29 +113,7 @@ fs.readFile(
       for(i = 0; i !== data.length; ++i)
         feature(data[i]);
 
-      var empty  = 0,
-          single = 0,
-          total  = 0,
-          key, keys;
-
-      for(i = buckets.length; i--; ) {
-        ++total;
-
-        if(!buckets[i]) {
-          ++empty;
-          continue;
-        }
-
-        keys = 0;
-        for(key in buckets[i])
-          ++keys;
-
-        if(keys === 1)
-          ++single;
-      }
-
       console.log("DONE");
-      console.log(empty, single, total);
     });
   }
 );
