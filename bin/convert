@@ -4,9 +4,10 @@ var fs       = require("fs"),
     Geometry = require("../lib/geometry"),
     path     = require("path"),
     zlib     = require("zlib"),
-    WIDTH    = 64,
-    HEIGHT   = 32,
-    buckets  = new Array(WIDTH * HEIGHT);
+    WIDTH    = 96,
+    HEIGHT   = 48,
+    buckets  = new Array(WIDTH * HEIGHT),
+    tzids    = [];
 
 function rectangle(x, y) {
   var left   = (x + 0) * 360 / WIDTH - 180,
@@ -72,7 +73,10 @@ function feature(feature) {
       count = 0,
       x, y, rect;
 
-  console.log(tzid);
+  if(tzids.indexOf(tzid) === -1) {
+    tzids.push(tzid);
+    console.log(tzid);
+  }
 
   for(y = 0; y !== HEIGHT; ++y) {
     for(x = 0; x !== WIDTH; ++x) {
@@ -129,6 +133,7 @@ fs.readFile(
       data = JSON.parse(data.toString("utf8")).features;
       for(i = 0; i !== data.length; ++i)
         feature(data[i]);
+      tzids.sort();
 
       /* Write the results to disk. */
       i = buckets.length;
@@ -144,25 +149,29 @@ fs.readFile(
 
           count = 0;
           for(key in buckets[i])
-            if(buckets.hasOwnProperty(key)) {
+            if(buckets[i].hasOwnProperty(key)) {
               tzid = key;
               ++count;
             }
 
-          if(count === 1)
-            out = tzid;
+          console.log("BUCKET %d COUNT %d", i, count);
 
-          else {
-            out  = [];
-            rect = Geometry.convert.box.polygon(rectangle(i % WIDTH, Math.floor(i / WIDTH)));
-
-            for(key in buckets[i])
-              for(j = 0; j !== buckets[i][key].length; ++j)
-                out.push(
-                  key,
-                  Geometry.clip.polygon.polygon(buckets[i][key][j], rect)
-                );
+          if(count === 1) {
+            buckets[i] = tzid;
+            continue;
           }
+
+          out  = [];
+          rect = Geometry.convert.box.polygon(rectangle(i % WIDTH, Math.floor(i / WIDTH)));
+
+          for(key in buckets[i])
+            for(j = 0; j !== buckets[i][key].length; ++j)
+              out.push(
+                key,
+                Geometry.clip.polygon.polygon(buckets[i][key][j], rect)
+              );
+
+          buckets[i] = "DISC";
 
           return zlib.gzip(JSON.stringify(out), function(err, data) {
             if(err)
@@ -172,7 +181,20 @@ fs.readFile(
           });
         }
 
-        console.log("DONE");
+        return zlib.gzip(
+          JSON.stringify(buckets),
+          function(err, data) {
+            if(err)
+              throw err;
+
+            fs.writeFile(path.join(__dirname, "../data/metadata.json.gz"), data, function(err) {
+              if(err)
+                throw err;
+
+              console.log("DONE");
+            });
+          }
+        );
       }
 
       next();

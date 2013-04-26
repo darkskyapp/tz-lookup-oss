@@ -2,34 +2,54 @@ var contains = require("./lib/geometry").overlap.point.polygon,
     fs       = require("fs"),
     path     = require("path"),
     zlib     = require("zlib"),
-    WIDTH    = 64,
-    HEIGHT   = 32;
+    WIDTH    = 96,
+    HEIGHT   = 48,
+    buckets  = require("cache-helpers").once(function(callback) {
+      return readGzippedJSON(
+        path.join(__dirname, "data/metadata.json.gz"),
+        callback
+      );
+    });
 
-function lookup(lat, lon, callback) {
-  var x = Math.floor((lon + 180) * WIDTH / 360),
-      y = Math.floor((90 - lat) * HEIGHT / 180),
-      i = y * WIDTH + x;
+function readGzippedJSON(path, callback) {
+  return fs.readFile(path, function(err, data) {
+    if(err)
+      return callback(err, null);
 
-  return fs.readFile(
-    path.join(__dirname, "data", i + ".json.gz"),
-    function(err, data) {
-      if(err && err.code === "ENOENT")
-        return callback(null, null);
-
+    return zlib.gunzip(data, function(err, data) {
       if(err)
         return callback(err, null);
 
-      return zlib.gunzip(data, function(err, data) {
+      try {
+        data = JSON.parse(data.toString("ascii"));
+      }
+
+      catch(err) {
+        return callback(err, null);
+      }
+
+      return callback(null, data);
+    });
+  });
+}
+
+function lookup(lat, lon, callback) {
+  return buckets(function(err, data) {
+    if(err)
+      return callback(err, null);
+
+    var x = Math.floor((lon + 180) * WIDTH / 360),
+        y = Math.floor((90 - lat) * HEIGHT / 180),
+        i = y * WIDTH + x;
+
+    if(data[i] !== "DISC")
+      return callback(null, data[i]);
+
+    return readGzippedJSON(
+      path.join(__dirname, "data", i + ".json.gz"),
+      function(err, data) {
         if(err)
-          return callback(err);
-
-        try {
-          data = JSON.parse(data.toString("ascii"));
-        }
-
-        catch(err) {
-          return callback(err);
-        }
+          return callback(err, null);
 
         if(typeof data === "string")
           return callback(null, data);
@@ -45,9 +65,9 @@ function lookup(lat, lon, callback) {
         }
 
         return callback(null, null);
-      });
-    }
-  );
+      }
+    );
+  });
 }
 
 function fallback(lat, lon) {
