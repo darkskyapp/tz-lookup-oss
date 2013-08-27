@@ -1,3 +1,5 @@
+var expect = require("chai").expect;
+
 describe("tz-lookup", function() {
   var lookup = require("../");
 
@@ -7,7 +9,7 @@ describe("tz-lookup", function() {
         if(err)
           return done(err);
 
-        expect(timezone).toBe(tzid);
+        expect(timezone).to.equal(tzid);
         done();
       });
     });
@@ -20,7 +22,7 @@ describe("tz-lookup", function() {
           return done(err);
 
         if(tzid.slice(0, 3) !== "Etc" || timezone.slice(0, 3) === "Etc")
-          expect(timezone).toBe(tzid);
+          expect(timezone).to.equal(tzid);
 
         done();
       });
@@ -44,10 +46,11 @@ describe("tz-lookup", function() {
   test( 47.5886, -122.3382,          "America/Los_Angeles")
   test( 58.3168, -134.4397,               "America/Juneau")
   test( 21.4381, -158.0493,             "Pacific/Honolulu")
-  test( 42.7000,  -80.0000,                    "Etc/GMT+5")
+  test( 42.7000,  -80.0000,              "America/Toronto")
   test( 51.0036, -114.0161,             "America/Edmonton")
   test(-16.4965,  -68.1702,               "America/La_Paz")
   test(-31.9369, 115.84534,              "Australia/Perth")
+  test( 42.0000, -87.50000,              "America/Chicago")
 
   /* These are automatically-generated fuzz-tests from v1. */
   fuzz(74.157, 171.054, "Etc/GMT-11");

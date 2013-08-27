@@ -1,4 +1,4 @@
-var contains = require("./lib/geometry").overlap.point.polygon,
+var distance = require("./lib/geometry").distanceSquared.point.polygon,
     fs       = require("fs"),
     path     = require("path"),
     zlib     = require("zlib"),
@@ -54,17 +54,31 @@ function lookup(lat, lon, callback) {
         if(typeof data === "string")
           return callback(null, data);
 
+        /* NASTY HACK: We require that the response is the closest polygon
+         * within 0.25 degrees. There's a bunch of problems with this. First,
+         * it disregards nearby polygons in different buckets. Second, we treat
+         * the Earth's surface as a plane, which isn't accurate. This should be
+         * *good enough* for our purposes, though, and I don't have the time to
+         * make this beautiful and perfect. (In fact, doing so is nearly
+         * impossible since territorial waters aren't well-defined by
+         * international law. Oh well.) */
+
         var point = [lon, lat],
-            i;
+            tz    = null,
+            best  = 0.125,
+            i, dist;
 
         for(i = data.length; i; ) {
           i -= 2;
+          dist = distance(point, data[i + 1]);
 
-          if(contains(point, data[i + 1]))
-            return callback(null, data[i]);
+          if(dist < best) {
+            best = dist;
+            tz = data[i];
+          }
         }
 
-        return callback(null, null);
+        return callback(null, tz);
       }
     );
   });
@@ -105,6 +119,6 @@ module.exports = function(lat, lon, callback) {
     return callback(new RangeError("Invalid coordinates provided."));
 
   return lookup(lat, lon, function(err, tzid) {
-    return callback(err, err ? undefined : tzid || fallback(lat, lon));
+    return callback(err, !err ? tzid || fallback(lat, lon) : null);
   });
 }

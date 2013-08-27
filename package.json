@@ -1,6 +1,6 @@
 {
   "name": "tz-lookup",
-  "version": "5.0.0",
+  "version": "5.1.0",
   "description": "time zone lookup",
   "keywords": [
     "tz",
@@ -19,6 +19,7 @@
     "cache-helpers": "1.3.x"
   },
   "devDependencies": {
-    "jasmine-node": "1.7.x"
+    "mocha": "1.12.x",
+    "chai": "1.7.x"
   }
 }
