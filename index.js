@@ -45,14 +45,11 @@ function lookup(lat, lon, callback) {
     if(data[i] !== "DISC")
       return callback(null, data[i]);
 
-    return readGzippedJSON(
-      path.join(__dirname, "data", i + ".json.gz"),
+    return fs.readFile(
+      path.join(__dirname, "data", i + ".bin"),
       function(err, data) {
         if(err)
           return callback(err, null);
-
-        if(typeof data === "string")
-          return callback(null, data);
 
         /* NASTY HACK: We require that the response is the closest polygon
          * within 0.25 degrees. There's a bunch of problems with this. First,
@@ -64,17 +61,33 @@ function lookup(lat, lon, callback) {
          * international law. Oh well.) */
 
         var point = [lon, lat],
-            tz    = null,
-            best  = 0.125,
-            i, dist;
+            poly = new Array(),
+            tz = null,
+            best = 0.125,
+            len = data.readUInt32BE(0),
+            off = 4,
+            strlen, str, i, dist;
 
-        for(i = data.length; i; ) {
-          i -= 2;
-          dist = distance(point, data[i + 1]);
+        while(len--) {
+          strlen = data.readUInt32BE(off);
+          off += 4;
+
+          str = data.toString("utf8", off, off + strlen);
+          off += strlen;
+
+          poly.length = data.readUInt32BE(off) * 2;
+          off += 4;
+
+          for(i = 0; i !== poly.length; ++i) {
+            poly[i] = data.readFloatBE(off);
+            off += 4;
+          }
+
+          dist = distance(point, poly);
 
           if(dist < best) {
             best = dist;
-            tz = data[i];
+            tz = str;
           }
         }
 

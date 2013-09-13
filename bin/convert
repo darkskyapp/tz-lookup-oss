@@ -118,6 +118,42 @@ function collapse() {
   }
 }
 
+function convertToBinary(data) {
+  var len = 4,
+      off = 0,
+      buf, i, j, l;
+
+  for(i = 0; i < data.length; i += 2)
+    len += (4 + Buffer.byteLength(data[i], "utf8")) + (4 + data[i + 1].length * 4);
+
+  buf = new Buffer(len);
+
+  /* Write number of polygons. */
+  buf.writeUInt32BE(data.length / 2, off);
+  off += 4;
+
+  /* For each poly... */
+  for(i = 0; i < data.length; i += 2) {
+    /* Write the TZ string. */
+    l = Buffer.byteLength(data[i], "utf8");
+    buf.writeUInt32BE(l, off);
+    off += 4;
+    buf.write(data[i], off, l, "utf8");
+    off += l;
+
+    /* Write the poly. */
+    buf.writeUInt32BE(data[i + 1].length / 2, off);
+    off += 4;
+
+    for(j = 0; j < data[i + 1].length; j++) {
+      buf.writeFloatBE(data[i + 1][j], off);
+      off += 4;
+    }
+  }
+
+  return buf;
+}
+
 fs.readFile(
   path.join(__dirname, "../data/tz_world.json.gz"),
   function(err, data) {
@@ -156,11 +192,6 @@ fs.readFile(
 
           console.log("BUCKET %d COUNT %d", i, count);
 
-          if(count === 1) {
-            buckets[i] = tzid;
-            continue;
-          }
-
           out  = [];
           rect = Geometry.convert.box.polygon(rectangle(i % WIDTH, Math.floor(i / WIDTH)));
 
@@ -173,12 +204,11 @@ fs.readFile(
 
           buckets[i] = "DISC";
 
-          return zlib.gzip(JSON.stringify(out), function(err, data) {
-            if(err)
-              throw err;
-
-            fs.writeFile(path.join(__dirname, "../data", i + ".json.gz"), data, next);
-          });
+          return fs.writeFile(
+            path.join(__dirname, "../data", i + ".bin"),
+            convertToBinary(out),
+            next
+          );
         }
 
         return zlib.gzip(
