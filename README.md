@@ -21,22 +21,9 @@ To use:
     > });
     "America/New_York"
 
-There are two data files: a small index file (which is loaded on the first call
-to `tzLookup()`) and larger polygon files on disk that are loaded as needed,
-and then discarded. Performance of any given query will vary depending on its
-location on the globe, but should be generally high in any case.
-
-Previous versions of this module stored the entire timezone database in RAM.
-This was inefficient for many use-cases and is no longer done. RAM usage from
-this module should generally be low.
-
-Regenerating the Database
--------------------------
-
-If you wish to regenerate the database, replace `data/tz_world.json` with a new
-version, and run `bin/convert`. This will update the backing data that this
-module uses.
-
-`tz_world.json` should, itself, be a GeoJSON of the global data found on this
-website: [http://efele.net/maps/tz/](http://efele.net/maps/tz/) It was last
-updated by us in December 2012.
+Previous versions of this module have experimented with a half-dozen different
+mechanisms for storing the timezone data on disk. The current version uses a
+single binary data file that essentially acts as a giant compressed bitmap,
+storing a timezone for each pixel on the globe. This is not perfectly accurate
+(since the source data is vector), but is very quick and easy to read from and
+ought to be more than accurate enough for most use-cases.

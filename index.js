@@ -1,137 +1,103 @@
-var distance = require("./lib/geometry").distanceSquared.point.polygon,
-    fs       = require("fs"),
-    path     = require("path"),
-    zlib     = require("zlib"),
-    WIDTH    = 96,
-    HEIGHT   = 48,
-    buckets  = require("cache-helpers").once(function(callback) {
-      return readGzippedJSON(
-        path.join(__dirname, "data/metadata.json.gz"),
-        callback
-      );
-    });
-
-function readGzippedJSON(path, callback) {
-  return fs.readFile(path, function(err, data) {
-    if(err)
-      return callback(err, null);
-
-    return zlib.gunzip(data, function(err, data) {
-      if(err)
-        return callback(err, null);
-
-      try {
-        data = JSON.parse(data.toString("ascii"));
-      }
-
-      catch(err) {
-        return callback(err, null);
-      }
-
-      return callback(null, data);
-    });
-  });
-}
-
-function lookup(lat, lon, callback) {
-  return buckets(function(err, data) {
-    if(err)
-      return callback(err, null);
-
-    var x = Math.floor((lon + 180) * WIDTH / 360),
-        y = Math.floor((90 - lat) * HEIGHT / 180),
-        i = y * WIDTH + x;
-
-    if(data[i] !== "DISC")
-      return callback(null, data[i]);
-
-    return fs.readFile(
-      path.join(__dirname, "data", i + ".bin"),
-      function(err, data) {
-        if(err)
-          return callback(err, null);
-
-        /* NASTY HACK: We require that the response is the closest polygon
-         * within 0.25 degrees. There's a bunch of problems with this. First,
-         * it disregards nearby polygons in different buckets. Second, we treat
-         * the Earth's surface as a plane, which isn't accurate. This should be
-         * *good enough* for our purposes, though, and I don't have the time to
-         * make this beautiful and perfect. (In fact, doing so is nearly
-         * impossible since territorial waters aren't well-defined by
-         * international law. Oh well.) */
-
-        var point = [lon, lat],
-            poly = new Array(),
-            tz = null,
-            best = 0.125,
-            len = data.readUInt32BE(0),
-            off = 4,
-            strlen, str, i, dist;
-
-        while(len--) {
-          strlen = data.readUInt32BE(off);
-          off += 4;
-
-          str = data.toString("utf8", off, off + strlen);
-          off += strlen;
-
-          poly.length = data.readUInt32BE(off) * 2;
-          off += 4;
-
-          for(i = 0; i !== poly.length; ++i) {
-            poly[i] = data.readFloatBE(off);
-            off += 4;
-          }
-
-          dist = distance(point, poly);
-
-          if(dist < best) {
-            best = dist;
-            tz = str;
-          }
-        }
-
-        return callback(null, tz);
-      }
-    );
-  });
-}
-
-function fallback(lat, lon) {
-  switch(Math.round((lon + 180) / 15)) {
-    case  0: return "Etc/GMT+12";
-    case  1: return "Etc/GMT+11";
-    case  2: return "Etc/GMT+10";
-    case  3: return "Etc/GMT+9";
-    case  4: return "Etc/GMT+8";
-    case  5: return "Etc/GMT+7";
-    case  6: return "Etc/GMT+6";
-    case  7: return "Etc/GMT+5";
-    case  8: return "Etc/GMT+4";
-    case  9: return "Etc/GMT+3";
-    case 10: return "Etc/GMT+2";
-    case 11: return "Etc/GMT+1";
-    case 12: return "Etc/GMT";
-    case 13: return "Etc/GMT-1";
-    case 14: return "Etc/GMT-2";
-    case 15: return "Etc/GMT-3";
-    case 16: return "Etc/GMT-4";
-    case 17: return "Etc/GMT-5";
-    case 18: return "Etc/GMT-6";
-    case 19: return "Etc/GMT-7";
-    case 20: return "Etc/GMT-8";
-    case 21: return "Etc/GMT-9";
-    case 22: return "Etc/GMT-10";
-    case 23: return "Etc/GMT-11";
-    case 24: return "Etc/GMT-12";
-  }
-}
+var fs        = require("fs"),
+    join      = require("path").join,
+    inflate   = require("zlib").inflate,
+    DATA_FILE = join(__dirname, "tz.bin");
 
 module.exports = function(lat, lon, callback) {
-  if(lat < -90 || lat > 90 || lon < -180 || lon > 180)
-    return callback(new RangeError("Invalid coordinates provided."));
+  lat = +lat;
+  lon = +lon;
 
-  return lookup(lat, lon, function(err, tzid) {
-    return callback(err, !err ? tzid || fallback(lat, lon) : null);
-  });
-}
+  if(!(lat >= -90.0 && lat <= +90.0 && lon >= -180.0 && lon <= +180.0))
+    callback(new RangeError("invalid coordinates"), null);
+
+  else {
+    fs.open(DATA_FILE, "r", function(err, fd) {
+      var buffer;
+
+      if(err)
+        callback(err, null);
+
+      else {
+        buffer = new Buffer(32);
+
+        fs.read(fd, buffer, 0, 12, 0, function(err, n) {
+          var tiles_across, tiles_down, tile_width, tile_height,
+              tz_count, tz_width, width, height, index_len, tz_len, x, y,
+              index_off;
+
+          function finish(err, data) {
+            fs.close(fd, function(_) {
+              callback(err, data);
+            });
+          }
+
+          if(err)
+            finish(err, null);
+
+          else if(n !== 12)
+            finish(new Error("unable to read header"), null);
+
+          else {
+            tiles_across = buffer.readUInt16LE( 0);
+            tiles_down   = buffer.readUInt16LE( 2);
+            tile_width   = buffer.readUInt16LE( 4);
+            tile_height  = buffer.readUInt16LE( 6);
+            tz_count     = buffer.readUInt16LE( 8);
+            tz_width     = buffer.readUInt16LE(10);
+            console.log("tiles_across=%d tiles_down=%d tile_width=%d tile_height=%d tz_count=%d tz_width=%d", tiles_across, tiles_down, tile_width, tile_height, tz_count, tz_width);
+
+            if(tz_width > buffer.length)
+              finish(new Error("unexpected timezone width"), null);
+
+            else {
+              width     = tiles_across * tile_width;
+              height    = tiles_down * tile_height;
+              index_len = (tiles_across * tiles_down) << 2;
+              tz_len    = tz_count * tz_width;
+              console.log("width=%d height=%d index_len=%d tz_len=%d", width, height, index_len, tz_len);
+
+              x = Math.round((180.0 + lon) * width / 360.0) % width;
+              y = Math.round((90.0 - lat) * (height - 1) / 180.0);
+              index_off = (Math.floor(y / tile_height) * tiles_across + Math.floor(x / tile_width)) << 2;
+              console.log("x=%d y=%d index_off=%d", x, y, index_off);
+
+              fs.read(fd, buffer, 0, 4, 12 + index_off, function(err, n) {
+                var off;
+
+                if(err)
+                  finish(err, null);
+
+                else if(n !== 4)
+                  finish(new Error("unable to read index"), null);
+
+                else {
+                  off = buffer.readUInt32LE(0);
+                  console.log("off=%s", off.toString(16));
+
+                  if((off & -65536) === -65536) {
+                    fs.read(fd, buffer, 0, tz_width, 12 + index_len + (off & 65535), function(err, n) {
+                      if(err)
+                        finish(err, null);
+
+                      else if(n !== tz_width)
+                        finish(new Error("unable to read timezone"), null);
+
+                      else
+                        finish(null, buffer.toString("ascii", 0, tz_width));
+                    });
+                  }
+
+                  else {
+                    /* FIXME: Unpack tile at offset and read the timezone entry
+                     * from there. */
+                    finish(new Error("FIXME"), null);
+                  }
+                }
+              });
+            }
+          }
+        });
+      }
+    });
+  }
+};
