@@ -22,8 +22,8 @@ var fs              = require("fs"),
      * apps lives there anyway), but should be pretty close to accurate in
      * North America, Europe, and Australia. */
     MAX_DISTANCE_SQ = 0.16,
-    TILES_ACROSS    = 192,
-    TILES_DOWN      = 96,
+    TILES_ACROSS    = 384,
+    TILES_DOWN      = 192,
     TILE_WIDTH      = 64,
     TILE_HEIGHT     = 64,
     WIDTH           = TILES_ACROSS * TILE_WIDTH,
