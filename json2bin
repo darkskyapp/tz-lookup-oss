@@ -22,8 +22,8 @@ var fs              = require("fs"),
      * apps lives there anyway), but should be pretty close to accurate in
      * North America, Europe, and Australia. */
     MAX_DISTANCE_SQ = 0.16,
-    TILES_ACROSS    = 384,
-    TILES_DOWN      = 192,
+    TILES_ACROSS    = 192,
+    TILES_DOWN      = 96,
     TILE_WIDTH      = 64,
     TILE_HEIGHT     = 64,
     WIDTH           = TILES_ACROSS * TILE_WIDTH,
@@ -307,7 +307,7 @@ readGeoJSON(path.join(__dirname, "tz_world.json.gz"), function(err, polygons) {
       dy     = 180.0 / (HEIGHT - 1),
       box    = new Array(4),
       list   = [],
-      x, y, data, u, v, i, j, lat, lon, bestPoly, bestDist, t, tzid;
+      x, y, data, u, v, i, j, lat, lon, bestPoly, bestDist, t, tzid, off;
 
   for(y = 0; y < TILES_DOWN; y++) {
     for(x = 0; x < TILES_ACROSS; x++) {
@@ -360,14 +360,15 @@ readGeoJSON(path.join(__dirname, "tz_world.json.gz"), function(err, polygons) {
           break;
 
       /* Every pixel is the same? Then write the index directly. */
-      if(i === -1)
-        index.writeUInt32LE((0xFFFF0000 | j) >>> 0, (y * TILES_ACROSS + x) << 2);
+      off = (y * TILES_ACROSS + x) << 2;
 
-      /* Ooh, or not? Okay, we need to save the chunk. */
-      else {
-        index.writeUInt32LE(chunks.length, (y * TILES_ACROSS + x) << 2);
+      if(~i) {
+        index.writeInt32LE(chunks.length, off);
         chunks.push(data);
       }
+
+      else
+        index.writeInt32LE(0xFFFFF000 | j, off);
     }
   }
 
@@ -385,9 +386,17 @@ readGeoJSON(path.join(__dirname, "tz_world.json.gz"), function(err, polygons) {
       offsets[i] = offsets[i - 1] + chunks[i - 1].length;
 
     for(i = TILES_ACROSS * TILES_DOWN; i--; ) {
-      off = index.readUInt32LE(i << 2);
-      if((off & 0xFFFF0000) !== -65536)
-        index.writeUInt32LE(offsets[off], i << 2);
+      off = index.readInt32LE(i << 2);
+      if(off < 0)
+        continue;
+
+      if(offsets[off] >= 1048576)
+        throw new Error("offset is unindexable with 20 bits");
+
+      if(chunks[off].length >= 4096)
+        throw new Error("chunk size is unindexable with 12 bits");
+
+      index.writeInt32LE((offsets[off] << 12) | chunks[off].length, i << 2);
     }
 
     /* Compute the max length of an timezone string. */
@@ -416,7 +425,6 @@ readGeoJSON(path.join(__dirname, "tz_world.json.gz"), function(err, polygons) {
     process.stdout.write(header);
     process.stdout.write(index);
     process.stdout.write(tz);
-
     for(i = 0; i < chunks.length; i++)
       process.stdout.write(chunks[i]);
   });

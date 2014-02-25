@@ -44,7 +44,6 @@ module.exports = function(lat, lon, callback) {
             tile_height  = buffer.readUInt16LE( 6);
             tz_count     = buffer.readUInt16LE( 8);
             tz_width     = buffer.readUInt16LE(10);
-            console.log("tiles_across=%d tiles_down=%d tile_width=%d tile_height=%d tz_count=%d tz_width=%d", tiles_across, tiles_down, tile_width, tile_height, tz_count, tz_width);
 
             if(tz_width > buffer.length)
               finish(new Error("unexpected timezone width"), null);
@@ -54,15 +53,30 @@ module.exports = function(lat, lon, callback) {
               height    = tiles_down * tile_height;
               index_len = (tiles_across * tiles_down) << 2;
               tz_len    = tz_count * tz_width;
-              console.log("width=%d height=%d index_len=%d tz_len=%d", width, height, index_len, tz_len);
 
               x = Math.round((180.0 + lon) * width / 360.0) % width;
               y = Math.round((90.0 - lat) * (height - 1) / 180.0);
               index_off = (Math.floor(y / tile_height) * tiles_across + Math.floor(x / tile_width)) << 2;
-              console.log("x=%d y=%d index_off=%d", x, y, index_off);
 
               fs.read(fd, buffer, 0, 4, 12 + index_off, function(err, n) {
-                var off;
+                var off, len;
+
+                function timezone(n) {
+                  var tz_off = 12 + index_len + n * tz_width;
+
+                  fs.read(fd, buffer, 0, tz_width, tz_off, function(err, n) {
+                    if(err)
+                      finish(err, null);
+
+                    else if(n !== tz_width)
+                      finish(new Error("unable to read timezone"), null);
+
+                    else {
+                      for(n = 0; n < tz_width && buffer[n]; n++);
+                      finish(null, buffer.toString("ascii", 0, n));
+                    }
+                  });
+                }
 
                 if(err)
                   finish(err, null);
@@ -71,26 +85,35 @@ module.exports = function(lat, lon, callback) {
                   finish(new Error("unable to read index"), null);
 
                 else {
-                  off = buffer.readUInt32LE(0);
-                  console.log("off=%s", off.toString(16));
+                  off = buffer.readUInt32LE(0) >>> 12;
+                  len = buffer.readUInt32LE(0) & 4095;
 
-                  if((off & -65536) === -65536) {
-                    fs.read(fd, buffer, 0, tz_width, 12 + index_len + (off & 65535), function(err, n) {
+                  if(off === 0xFFFFF)
+                    timezone(len);
+
+                  else {
+                    off = 12 + index_len + tz_len + off;
+
+                    fs.read(fd, new Buffer(len), 0, len, off, function(err, n, data) {
                       if(err)
                         finish(err, null);
 
-                      else if(n !== tz_width)
-                        finish(new Error("unable to read timezone"), null);
+                      else if(n !== len)
+                        finish(new Error("unable to read tile"), null);
 
                       else
-                        finish(null, buffer.toString("ascii", 0, tz_width));
-                    });
-                  }
+                        inflate(data, function(err, data) {
+                          var tile_off;
 
-                  else {
-                    /* FIXME: Unpack tile at offset and read the timezone entry
-                     * from there. */
-                    finish(new Error("FIXME"), null);
+                          if(err)
+                            finish(err, null);
+
+                          else {
+                            tile_off = ((y % tile_height) * tile_width + (x % tile_width)) << 1;
+                            timezone(data.readUInt16LE(tile_off));
+                          }
+                        });
+                    });
                   }
                 }
               });
