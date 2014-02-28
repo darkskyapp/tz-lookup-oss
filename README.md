@@ -15,10 +15,8 @@ To install:
 
 To use:
 
-    > var tzLookup = require("tz-lookup");
-    > tzLookup(42.7235, -73.6931, function(err, tz) {
-    >   console.log(tz);
-    > });
+    > var tz = require("tz-lookup");
+    > console.log(tz(42.7235, -73.6931));
     "America/New_York"
 
 Previous versions of this module have experimented with a half-dozen different
