@@ -1,204 +1,167 @@
-var fs        = require("fs"),
-    inflate   = require("zlib").inflateRaw,
-    DATA_FILE = require("path").join(__dirname, "tz.new.bin");
+var DATA = require("fs").readFileSync(require("path").join(__dirname, "tz.bin")),
+    TILE_WIDTH = 8,
+    TILE_HEIGHT = 8,
+    TIMEZONE_LIST = [
+      "Africa/Abidjan", "Africa/Accra", "Africa/Addis_Ababa", "Africa/Algiers",
+      "Africa/Asmara", "Africa/Bamako", "Africa/Bangui", "Africa/Banjul",
+      "Africa/Bissau", "Africa/Blantyre", "Africa/Brazzaville",
+      "Africa/Bujumbura", "Africa/Cairo", "Africa/Casablanca", "Africa/Ceuta",
+      "Africa/Conakry", "Africa/Dakar", "Africa/Dar_es_Salaam",
+      "Africa/Djibouti", "Africa/Douala", "Africa/El_Aaiun", "Africa/Freetown",
+      "Africa/Gaborone", "Africa/Harare", "Africa/Johannesburg", "Africa/Juba",
+      "Africa/Kampala", "Africa/Khartoum", "Africa/Kigali", "Africa/Kinshasa",
+      "Africa/Lagos", "Africa/Libreville", "Africa/Lome", "Africa/Luanda",
+      "Africa/Lubumbashi", "Africa/Lusaka", "Africa/Malabo", "Africa/Maputo",
+      "Africa/Maseru", "Africa/Mbabane", "Africa/Mogadishu", "Africa/Monrovia",
+      "Africa/Nairobi", "Africa/Ndjamena", "Africa/Niamey",
+      "Africa/Nouakchott", "Africa/Ouagadougou", "Africa/Porto-Novo",
+      "Africa/Sao_Tome", "Africa/Tripoli", "Africa/Tunis", "Africa/Windhoek",
+      "America/Adak", "America/Anchorage", "America/Anguilla",
+      "America/Antigua", "America/Araguaina", "America/Argentina/Buenos_Aires",
+      "America/Argentina/Catamarca", "America/Argentina/Cordoba",
+      "America/Argentina/Jujuy", "America/Argentina/La_Rioja",
+      "America/Argentina/Mendoza", "America/Argentina/Rio_Gallegos",
+      "America/Argentina/Salta", "America/Argentina/San_Juan",
+      "America/Argentina/San_Luis", "America/Argentina/Tucuman",
+      "America/Argentina/Ushuaia", "America/Aruba", "America/Asuncion",
+      "America/Atikokan", "America/Bahia", "America/Bahia_Banderas",
+      "America/Barbados", "America/Belem", "America/Belize",
+      "America/Blanc-Sablon", "America/Boa_Vista", "America/Bogota",
+      "America/Boise", "America/Cambridge_Bay", "America/Campo_Grande",
+      "America/Cancun", "America/Caracas", "America/Cayenne", "America/Cayman",
+      "America/Chicago", "America/Chihuahua", "America/Coral_Harbour",
+      "America/Costa_Rica", "America/Creston", "America/Cuiaba",
+      "America/Curacao", "America/Danmarkshavn", "America/Dawson",
+      "America/Dawson_Creek", "America/Denver", "America/Detroit",
+      "America/Dominica", "America/Edmonton", "America/Eirunepe",
+      "America/El_Salvador", "America/Fortaleza", "America/Glace_Bay",
+      "America/Godthab", "America/Goose_Bay", "America/Grand_Turk",
+      "America/Grenada", "America/Guadeloupe", "America/Guatemala",
+      "America/Guayaquil", "America/Guyana", "America/Halifax",
+      "America/Havana", "America/Hermosillo", "America/Indiana/Indianapolis",
+      "America/Indiana/Knox", "America/Indiana/Marengo",
+      "America/Indiana/Petersburg", "America/Indiana/Tell_City",
+      "America/Indiana/Vevay", "America/Indiana/Vincennes",
+      "America/Indiana/Winamac", "America/Inuvik", "America/Iqaluit",
+      "America/Jamaica", "America/Juneau", "America/Kentucky/Louisville",
+      "America/Kentucky/Monticello", "America/Kralendijk", "America/La_Paz",
+      "America/Lima", "America/Los_Angeles", "America/Lower_Princes",
+      "America/Maceio", "America/Managua", "America/Manaus", "America/Marigot",
+      "America/Martinique", "America/Matamoros", "America/Mazatlan",
+      "America/Menominee", "America/Merida", "America/Metlakatla",
+      "America/Mexico_City", "America/Miquelon", "America/Moncton",
+      "America/Monterrey", "America/Montevideo", "America/Montreal",
+      "America/Montserrat", "America/Nassau", "America/New_York",
+      "America/Nipigon", "America/Nome", "America/Noronha",
+      "America/North_Dakota/Beulah", "America/North_Dakota/Center",
+      "America/North_Dakota/New_Salem", "America/Ojinaga", "America/Panama",
+      "America/Pangnirtung", "America/Paramaribo", "America/Phoenix",
+      "America/Port-au-Prince", "America/Port_of_Spain", "America/Porto_Velho",
+      "America/Puerto_Rico", "America/Rainy_River", "America/Rankin_Inlet",
+      "America/Recife", "America/Regina", "America/Resolute",
+      "America/Rio_Branco", "America/Santa_Isabel", "America/Santarem",
+      "America/Santiago", "America/Santo_Domingo", "America/Sao_Paulo",
+      "America/Scoresbysund", "America/Sitka", "America/St_Barthelemy",
+      "America/St_Johns", "America/St_Kitts", "America/St_Lucia",
+      "America/St_Thomas", "America/St_Vincent", "America/Swift_Current",
+      "America/Tegucigalpa", "America/Thule", "America/Thunder_Bay",
+      "America/Tijuana", "America/Toronto", "America/Tortola",
+      "America/Vancouver", "America/Whitehorse", "America/Winnipeg",
+      "America/Yakutat", "America/Yellowknife", "Antarctica/Macquarie",
+      "Arctic/Longyearbyen", "Asia/Aden", "Asia/Almaty", "Asia/Amman",
+      "Asia/Anadyr", "Asia/Aqtau", "Asia/Aqtobe", "Asia/Ashgabat",
+      "Asia/Baghdad", "Asia/Bahrain", "Asia/Baku", "Asia/Bangkok",
+      "Asia/Beirut", "Asia/Bishkek", "Asia/Brunei", "Asia/Choibalsan",
+      "Asia/Chongqing", "Asia/Colombo", "Asia/Damascus", "Asia/Dhaka",
+      "Asia/Dili", "Asia/Dubai", "Asia/Dushanbe", "Asia/Gaza", "Asia/Harbin",
+      "Asia/Hebron", "Asia/Ho_Chi_Minh", "Asia/Hong_Kong", "Asia/Hovd",
+      "Asia/Irkutsk", "Asia/Jakarta", "Asia/Jayapura", "Asia/Jerusalem",
+      "Asia/Kabul", "Asia/Kamchatka", "Asia/Karachi", "Asia/Kashgar",
+      "Asia/Kathmandu", "Asia/Khandyga", "Asia/Kolkata", "Asia/Krasnoyarsk",
+      "Asia/Kuala_Lumpur", "Asia/Kuching", "Asia/Kuwait", "Asia/Macau",
+      "Asia/Magadan", "Asia/Makassar", "Asia/Manila", "Asia/Muscat",
+      "Asia/Nicosia", "Asia/Novokuznetsk", "Asia/Novosibirsk", "Asia/Omsk",
+      "Asia/Oral", "Asia/Phnom_Penh", "Asia/Pontianak", "Asia/Pyongyang",
+      "Asia/Qatar", "Asia/Qyzylorda", "Asia/Rangoon", "Asia/Riyadh",
+      "Asia/Sakhalin", "Asia/Samarkand", "Asia/Seoul", "Asia/Shanghai",
+      "Asia/Singapore", "Asia/Taipei", "Asia/Tashkent", "Asia/Tbilisi",
+      "Asia/Tehran", "Asia/Thimphu", "Asia/Tokyo", "Asia/Ulaanbaatar",
+      "Asia/Urumqi", "Asia/Ust-Nera", "Asia/Vientiane", "Asia/Vladivostok",
+      "Asia/Yakutsk", "Asia/Yekaterinburg", "Asia/Yerevan", "Atlantic/Azores",
+      "Atlantic/Bermuda", "Atlantic/Canary", "Atlantic/Cape_Verde",
+      "Atlantic/Faroe", "Atlantic/Madeira", "Atlantic/Reykjavik",
+      "Atlantic/South_Georgia", "Atlantic/St_Helena", "Atlantic/Stanley",
+      "Australia/Adelaide", "Australia/Brisbane", "Australia/Broken_Hill",
+      "Australia/Currie", "Australia/Darwin", "Australia/Eucla",
+      "Australia/Hobart", "Australia/Lindeman", "Australia/Lord_Howe",
+      "Australia/Melbourne", "Australia/Perth", "Australia/Sydney",
+      "Europe/Amsterdam", "Europe/Andorra", "Europe/Athens", "Europe/Belgrade",
+      "Europe/Berlin", "Europe/Bratislava", "Europe/Brussels",
+      "Europe/Bucharest", "Europe/Budapest", "Europe/Chisinau",
+      "Europe/Copenhagen", "Europe/Dublin", "Europe/Gibraltar",
+      "Europe/Guernsey", "Europe/Helsinki", "Europe/Isle_of_Man",
+      "Europe/Istanbul", "Europe/Jersey", "Europe/Kaliningrad", "Europe/Kiev",
+      "Europe/Lisbon", "Europe/Ljubljana", "Europe/London",
+      "Europe/Luxembourg", "Europe/Madrid", "Europe/Malta", "Europe/Mariehamn",
+      "Europe/Minsk", "Europe/Monaco", "Europe/Moscow", "Europe/Oslo",
+      "Europe/Paris", "Europe/Podgorica", "Europe/Prague", "Europe/Riga",
+      "Europe/Rome", "Europe/Samara", "Europe/San_Marino", "Europe/Sarajevo",
+      "Europe/Simferopol", "Europe/Skopje", "Europe/Sofia", "Europe/Stockholm",
+      "Europe/Tallinn", "Europe/Tirane", "Europe/Uzhgorod", "Europe/Vaduz",
+      "Europe/Vatican", "Europe/Vienna", "Europe/Vilnius", "Europe/Volgograd",
+      "Europe/Warsaw", "Europe/Zagreb", "Europe/Zaporozhye", "Europe/Zurich",
+      "Indian/Antananarivo", "Indian/Chagos", "Indian/Christmas",
+      "Indian/Cocos", "Indian/Comoro", "Indian/Kerguelen", "Indian/Mahe",
+      "Indian/Maldives", "Indian/Mauritius", "Indian/Mayotte",
+      "Indian/Reunion", "Pacific/Apia", "Pacific/Auckland", "Pacific/Chatham",
+      "Pacific/Chuuk", "Pacific/Easter", "Pacific/Efate", "Pacific/Enderbury",
+      "Pacific/Fakaofo", "Pacific/Fiji", "Pacific/Funafuti",
+      "Pacific/Galapagos", "Pacific/Gambier", "Pacific/Guadalcanal",
+      "Pacific/Guam", "Pacific/Honolulu", "Pacific/Johnston",
+      "Pacific/Kiritimati", "Pacific/Kosrae", "Pacific/Kwajalein",
+      "Pacific/Majuro", "Pacific/Marquesas", "Pacific/Midway", "Pacific/Nauru",
+      "Pacific/Niue", "Pacific/Norfolk", "Pacific/Noumea", "Pacific/Pago_Pago",
+      "Pacific/Palau", "Pacific/Pitcairn", "Pacific/Pohnpei",
+      "Pacific/Port_Moresby", "Pacific/Rarotonga", "Pacific/Saipan",
+      "Pacific/Tahiti", "Pacific/Tarawa", "Pacific/Tongatapu", "Pacific/Wake",
+      "Pacific/Wallis"
+    ],
+    TIMEZONE_INTERNATIONAL_LIST = [
+      "Etc/GMT+12", "Etc/GMT+11", "Etc/GMT+10", "Etc/GMT+9", "Etc/GMT+8",
+      "Etc/GMT+7", "Etc/GMT+6", "Etc/GMT+5", "Etc/GMT+4", "Etc/GMT+3",
+      "Etc/GMT+2", "Etc/GMT+1", "Etc/GMT", "Etc/GMT-1", "Etc/GMT-2",
+      "Etc/GMT-3", "Etc/GMT-4", "Etc/GMT-5", "Etc/GMT-6", "Etc/GMT-7",
+      "Etc/GMT-8", "Etc/GMT-9", "Etc/GMT-10", "Etc/GMT-11", "Etc/GMT-12"
+    ];
 
-module.exports = function(lat, lon, callback) {
+module.exports = function(lat, lon) {
+  var x, y, u, v, t;
+
   lat = +lat;
   lon = +lon;
 
-  if(!(lat >= -90.0 && lat <= +90.0 && lon >= -180.0 && lon <= +180.0)) {
-    callback(new RangeError("invalid coordinates"), null);
-    return;
+  if(!(lat >= -90.0 && lat <= +90.0 && lon >= -180.0 && lon <= +180.0))
+    throw new new RangeError("invalid coordinates");
+
+  /* Rescale <lat,lon> into the range [0,1). */
+  x = (180.0 + lon) / 360.00000000000006;
+  y = ( 90.0 - lat) / 180.00000000000003;
+  t = 0;
+
+  while((t & 0xFE00) !== 0xFE00) {
+    x *= TILE_WIDTH;
+    u = x|0;
+    x = (x - u) % 1.0;
+
+    y *= TILE_HEIGHT;
+    v = y|0;
+    y = (y - v) % 1.0;
+
+    t = DATA.readUInt16LE((t * TILE_WIDTH * TILE_HEIGHT + v * TILE_WIDTH + u) << 1);
   }
 
-  fs.open(DATA_FILE, "r", function(err, fd) {
-    var buffer;
-
-    if(err) {
-      callback(err, null);
-      return;
-    }
-
-    buffer = new Buffer(1024);
-
-    fs.read(fd, buffer, 0, 10, 0, function(err, n) {
-      var tiles_across, tiles_down, tile_width, tile_height, chunk_count,
-          tz_count, width, height, map_off, map_len, chunklist_off,
-          chunklist_len, tzlist_off, tzlist_len, data_off, x, y, cell_off;
-
-      function finish(err, data) {
-        fs.close(fd, function(_) {
-          callback(err, data);
-        });
-      }
-
-      if(err) {
-        finish(err, null);
-        return;
-      }
-
-      if(n !== 10) {
-        finish(new Error("unable to read header"), null);
-        return;
-      }
-
-      tiles_across  = buffer.readUInt16LE(0);
-      tiles_down    = buffer.readUInt16LE(2);
-      tile_width    = buffer.readUInt8(4);
-      tile_height   = buffer.readUInt8(5);
-      chunk_count   = buffer.readUInt16LE(6);
-      tz_count      = buffer.readUInt16LE(8);
-      width         = tiles_across * tile_width;
-      height        = tiles_down * tile_height;
-      map_off       = 10;
-      map_len       = (tiles_across * tiles_down) << 1;
-      chunklist_off = map_off + map_len;
-      chunklist_len = chunk_count << 2;
-      tzlist_off    = chunklist_off + chunklist_len;
-      tzlist_len    = tz_count << 2;
-      data_off      = tzlist_off + tzlist_len;
-
-      x = Math.round((180.0 + lon) * width / 360.0) % width;
-      y = Math.round((90.0 - lat) * (height - 1) / 180.0);
-      cell_off = map_off + ((Math.floor(y / tile_height) * tiles_across + Math.floor(x / tile_width)) << 1);
-
-      fs.read(fd, buffer, 0, 2, cell_off, function(err, n) {
-        var num, chunk_off;
-
-        function timezone(i) {
-          var tz_off = tzlist_off + (i << 2);
-
-          fs.read(fd, buffer, 0, 4, tz_off, function(err, n) {
-            var num, tzdata_len, tzdata_off;
-
-            if(err) {
-              finish(err, null);
-              return;
-            }
-
-            if(n !== 4) {
-              finish(new Error("unable to read timezone list"), null);
-              return;
-            }
-
-            num        = buffer.readUInt32LE(0);
-            tzdata_len = num & 0x000003FF;
-            tzdata_off = data_off + (num >>> 10);
-
-            /* This should never happen. */
-            if(tzdata_len > buffer.length) {
-              finish(new Error("unable to read long timezone"), null);
-              return;
-            }
-
-            fs.read(fd, buffer, 0, tzdata_len, tzdata_off, function(err, n) {
-              if(err) {
-                finish(err, null);
-                return;
-              }
-
-              if(n !== tzdata_len) {
-                finish(new Error("unable to read timezone"), null);
-                return;
-              }
-
-              finish(null, buffer.toString("ascii", 0, tzdata_len));
-            });
-          });
-        }
-
-        if(err) {
-          finish(err, null);
-          return;
-        }
-
-        if(n !== 2) {
-          finish(new Error("unable to read timezone map"), null);
-          return;
-        }
-
-        num = buffer.readUInt16LE(0);
-
-        if((num & 0xFE00) === 0xFE00) {
-          timezone(num & 0x01FF);
-          return;
-        }
-
-        chunk_off = chunklist_off + (num << 2);
-
-        fs.read(fd, buffer, 0, 4, chunk_off, function(err, n) {
-          var num, chunkdata_len, chunkdata_off;
-
-          if(err) {
-            finish(err, null);
-            return;
-          }
-
-          if(n !== 4) {
-            finish(new Error("unable to read chunk list"), null);
-            return;
-          }
-
-          num           = buffer.readUInt32LE(0);
-          chunkdata_len = num & 0x000003FF;
-          chunkdata_off = data_off + (num >>> 10);
-
-          /* This should never happen. */
-          if(chunkdata_len > buffer.length) {
-            finish(new Error("unable to read long chunk"), null);
-            return;
-          }
-
-          fs.read(fd, buffer, 0, chunkdata_len, chunkdata_off, function(err, n) {
-            var palette_len, bitmap_off, bpp;
-
-            if(err) {
-              finish(err, null);
-              return;
-            }
-
-            if(n !== chunkdata_len) {
-              finish(new Error("unable to read chunk"), null);
-              return;
-            }
-
-            palette_len = buffer.readUInt8(0);
-            bitmap_off  = 1 + (palette_len << 1);
-
-            if(palette_len > 16)
-              bpp = 8;
-
-            else if(palette_len > 4)
-              bpp = 4;
-
-            else if(palette_len > 2)
-              bpp = 2;
-
-            else if(palette_len > 1)
-              bpp = 1;
-
-            /* This should never happen. */
-            else {
-              finish(new Error("invalid chunk palette size"), null);
-              return;
-            }
-
-            inflate(buffer.slice(bitmap_off), function(err, bitmap) {
-              var bit, index, palette_off;
-
-              if(err) {
-                finish(err, null);
-                return;
-              }
-
-              bit = ((y % tile_height) * tile_width + (x % tile_width)) * bpp;
-              index = (bitmap.readUInt8(bit >> 3) >> (bit & 7)) & ((1 << bpp) - 1);
-              palette_off = 1 + (index << 1);
-              timezone(buffer.readUInt16LE(palette_off));
-            });
-          });
-        });
-      });
-    });
-  });
+  t &= 0x01FF;
+  return t < TIMEZONE_LIST.length ?
+    TIMEZONE_LIST[t] :
+    TIMEZONE_INTERNATIONAL_LIST[Math.round((180.0 + lon) / 15.0)];
 };

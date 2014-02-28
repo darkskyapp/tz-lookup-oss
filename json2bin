@@ -1,33 +1,11 @@
 #!/usr/bin/env node
 
-/* Final image should be 32768 * 16384. (That's big enough that the final image
- * has a single pixel for the smallest timezone, Vatican City.) Each pixel
- * needs to be a short since there are 400-something timezones. (Though, maybe
- * we can pack two pixels into 3 bytes or somesuch. Each pixel needs exactly 9
- * bits...)
- * 
- * That's 1GB, which is too big to be practical. Perhaps we can pack it into
- * tiles with a header and an offset index, with each tile compressed with
- * gzip. I should try varying tile sizes to compare compression ratios and
- * average read times. */
-
-var fs              = require("fs"),
-    path            = require("path"),
-    zlib            = require("zlib"),
-    /* Spherical geometry is expensive, and furthermore is unnecessary in this
-     * case. We want points within 0.4 degrees (the average distance of
-     * territorial waters) of the coast to be considered. This means too much
-     * will be considered near the poles (but nobody lives there anyway) and
-     * too little will be considered near the equator (but nobody who uses our
-     * apps lives there anyway), but should be pretty close to accurate in
-     * North America, Europe, and Australia. */
+var fs   = require("fs"),
+    path = require("path"),
     MAX_DISTANCE_SQ = 0.16,
-    TILES_ACROSS    = 384,
-    TILES_DOWN      = 192,
-    TILE_WIDTH      = 64,
-    TILE_HEIGHT     = 64,
-    WIDTH           = TILES_ACROSS * TILE_WIDTH,
-    HEIGHT          = TILES_DOWN * TILE_HEIGHT;
+    TILE_WIDTH      = 8,
+    TILE_HEIGHT     = 8,
+    MAX_DEPTH       = 3;
 
 function bound(poly) {
   var bound = [
@@ -170,57 +148,43 @@ Polygon.prototype = {
 };
 
 function readGeoJSON(pathname, callback) {
-  fs.readFile(pathname, function(err, data) {
-    if(err)
+  fs.readFile(pathname, "ascii", function(err, data) {
+    var i;
+
+    if(err) {
       callback(err, null);
+      return;
+    }
 
-    else
-      zlib.gunzip(data, function(err, data) {
-        var i;
+    try {
+      data = JSON.parse(data.toString("ascii"));
+    }
 
-        if(err)
-          callback(err, null);
+    catch(err) {
+      callback(err, null);
+      return;
+    }
 
-        else {
-          try {
-            data = JSON.parse(data.toString("ascii"));
-          }
+    data = data.features;
+    for(i = data.length; i--; )
+      if(!data[i].properties ||
+         !data[i].properties.TZID ||
+         data[i].properties.TZID === "uninhabited")
+        data.splice(i, 1);
 
-          catch(err) {
-            callback(err, null);
-            return;
-          }
+      else
+        data[i] = new Polygon(data[i]);
 
-          data = data.features;
-          for(i = data.length; i--; )
-            if(!data[i].properties ||
-               !data[i].properties.TZID ||
-               data[i].properties.TZID === "uninhabited")
-              data.splice(i, 1);
+    data.sort(function(a, b) {
+      return a.area - b.area;
+    });
 
-            else
-              data[i] = new Polygon(data[i]);
-
-          data.sort(function(a, b) {
-            return a.area - b.area;
-          });
-
-          callback(null, data);
-        }
-      });
+    callback(null, data);
   });
 }
 
 function tzindex(polygons) {
-  var hash = {
-        "Etc/GMT+12": -1, "Etc/GMT+11": -1, "Etc/GMT+10": -1, "Etc/GMT+9":  -1,
-        "Etc/GMT+8":  -1, "Etc/GMT+7":  -1, "Etc/GMT+6":  -1, "Etc/GMT+5":  -1,
-        "Etc/GMT+4":  -1, "Etc/GMT+3":  -1, "Etc/GMT+2":  -1, "Etc/GMT+1":  -1,
-        "Etc/GMT":    -1, "Etc/GMT-1":  -1, "Etc/GMT-2":  -1, "Etc/GMT-3":  -1,
-        "Etc/GMT-4":  -1, "Etc/GMT-5":  -1, "Etc/GMT-6":  -1, "Etc/GMT-7":  -1,
-        "Etc/GMT-8":  -1, "Etc/GMT-9":  -1, "Etc/GMT-10": -1, "Etc/GMT-11": -1,
-        "Etc/GMT-12": -1
-      },
+  var hash = {},
       list = [],
       i;
 
@@ -239,193 +203,122 @@ function tzindex(polygons) {
   return {list: list, hash: hash};
 }
 
-function internationalTzid(lon) {
-  switch(Math.round((lon + 180) / 15)) {
-    case  0: return "Etc/GMT+12";
-    case  1: return "Etc/GMT+11";
-    case  2: return "Etc/GMT+10";
-    case  3: return "Etc/GMT+9";
-    case  4: return "Etc/GMT+8";
-    case  5: return "Etc/GMT+7";
-    case  6: return "Etc/GMT+6";
-    case  7: return "Etc/GMT+5";
-    case  8: return "Etc/GMT+4";
-    case  9: return "Etc/GMT+3";
-    case 10: return "Etc/GMT+2";
-    case 11: return "Etc/GMT+1";
-    case 12: return "Etc/GMT";
-    case 13: return "Etc/GMT-1";
-    case 14: return "Etc/GMT-2";
-    case 15: return "Etc/GMT-3";
-    case 16: return "Etc/GMT-4";
-    case 17: return "Etc/GMT-5";
-    case 18: return "Etc/GMT-6";
-    case 19: return "Etc/GMT-7";
-    case 20: return "Etc/GMT-8";
-    case 21: return "Etc/GMT-9";
-    case 22: return "Etc/GMT-10";
-    case 23: return "Etc/GMT-11";
-    case 24: return "Etc/GMT-12";
-  }
+function indent(n) {
+  var str = "";
+
+  while(n--)
+    str += "  ";
+
+  return str;
 }
 
-function cpsmap(list, filter, continuation) {
-  var i   = list.length,
-      map = new Array(i);
-
-  function end() {
-    continuation(null, map);
-  }
-
-  function next() {
-    if(~--i)
-      filter(list[i], function(err, data) {
-        if(err)
-          continuation(err, null);
-
-        else {
-          map[i] = data;
-          next();
-        }
-      });
-
-    else
-      process.nextTick(end);
-  }
-
-  next();
-}
-
-readGeoJSON(path.join(__dirname, "tz_world.json.gz"), function(err, polygons) {
+console.warn("WIDTH = %d, HEIGHT = %d", Math.pow(TILE_WIDTH, MAX_DEPTH), Math.pow(TILE_HEIGHT, MAX_DEPTH));
+readGeoJSON(path.join(__dirname, "tz_world.json"), function(err, polygons) {
   if(err)
     throw err;
 
-  var zones  = tzindex(polygons),
-      index  = new Buffer(TILES_ACROSS * TILES_DOWN * 4),
-      chunks = [],
-      dx     = 360.0 / WIDTH,
-      dy     = 180.0 / (HEIGHT - 1),
-      box    = new Array(4),
-      list   = [],
-      x, y, data, u, v, i, j, lat, lon, bestPoly, bestDist, t, tzid, off;
+  var zones = tzindex(polygons),
+      tiles = [];
 
-  for(y = 0; y < TILES_DOWN; y++) {
-    for(x = 0; x < TILES_ACROSS; x++) {
-      box[0] = (x * TILE_WIDTH + 0) * dx - 180.0 - MAX_DISTANCE_SQ;
-      box[1] = 90.0 - (y * TILE_HEIGHT + TILE_HEIGHT) * dy - MAX_DISTANCE_SQ;
-      box[2] = (x * TILE_WIDTH + TILE_WIDTH) * dx - 180.0 + MAX_DISTANCE_SQ;
-      box[3] = 90.0 - (y * TILE_HEIGHT + 0) * dy + MAX_DISTANCE_SQ;
+  function tile(polygons, min_lat, min_lon, max_lat, max_lon, depth) {
+    var box = [
+          min_lon - MAX_DISTANCE_SQ,
+          min_lat - MAX_DISTANCE_SQ,
+          max_lon + MAX_DISTANCE_SQ,
+          max_lat + MAX_DISTANCE_SQ
+        ],
+        list = [], i, data, x, y, lat, lon, best, dist, t;
 
-      list.length = 0;
-      for(i = polygons.length; i--; )
-        if(polygons[i].overlap(box))
-          list.push(polygons[i]);
+    for(i = polygons.length; i--; )
+      if(polygons[i].overlap(box))
+        list.push(polygons[i]);
 
-      data = new Buffer(TILE_WIDTH * TILE_HEIGHT * 2);
-
-      for(v = 0; v < TILE_HEIGHT; v++) {
-        lat = 90.0 - (y * TILE_HEIGHT + v) * dy;
-
-        for(u = 0; u < TILE_WIDTH; u++) {
-          lon = (x * TILE_WIDTH + u) * dx - 180.0;
-
-          bestPoly = null;
-          bestDist = MAX_DISTANCE_SQ;
-
-          for(i = list.length; i--; ) {
-            box[0] = lon - bestDist;
-            box[1] = lat - bestDist;
-            box[2] = lon + bestDist;
-            box[3] = lat + bestDist;
-            if(!list[i].overlap(box))
-              continue;
-
-            t = list[i].distance(lat, lon);
-            if(t >= bestDist)
-              continue;
-
-            bestPoly = list[i];
-            bestDist = t;
-          }
-
-          tzid = bestPoly ? bestPoly.tzid : internationalTzid(lon);
-
-          data.writeUInt16LE(zones.hash[tzid], (v * TILE_WIDTH + u) << 1);
-        }
-      }
-
-      j = data.readUInt16LE(0);
-      for(i = TILE_WIDTH * TILE_HEIGHT; i--; )
-        if(data.readUInt16LE(i << 1) !== j)
-          break;
-
-      /* Every pixel is the same? Then write the index directly. */
-      off = (y * TILES_ACROSS + x) << 2;
-
-      if(~i) {
-        index.writeInt32LE(chunks.length, off);
-        chunks.push(data);
-      }
-
-      else
-        index.writeInt32LE(0xFFFFF000 | j, off);
+    /* No polygons cover the area? Well then, just exit early. */
+    if(list.length === 0) {
+      console.warn("%s[%d,%d,%d,%d] => empty (no coverage)", indent(depth), min_lat, min_lon, max_lat, max_lon);
+      return 0xFFFF;
     }
+
+    /* If we don't want to recurse any more, just return a single pixel. */
+    if(depth === MAX_DEPTH) {
+      lat = (min_lat + max_lat) * 0.5;
+      lon = (min_lon + max_lon) * 0.5;
+
+      best = null;
+      dist = MAX_DISTANCE_SQ;
+      for(i = list.length; i--; ) {
+        box[0] = lon - dist;
+        box[1] = lat - dist;
+        box[2] = lon + dist;
+        box[3] = lat + dist;
+        if(!list[i].overlap(box))
+          continue;
+
+        t = list[i].distance(lat, lon);
+        if(t >= dist)
+          continue;
+
+        best = list[i];
+        dist = t;
+      }
+
+      if(!best) {
+        console.warn("%s[%d,%d,%d,%d] => empty (max depth)", indent(depth), min_lat, min_lon, max_lat, max_lon);
+        return 0xFFFF;
+      }
+
+      console.warn("%s[%d,%d,%d,%d] => %s (max depth)", indent(depth), min_lat, min_lon, max_lat, max_lon, best.tzid);
+      return (zones.hash[best.tzid] & 0x01FF) | 0xFE00;
+    }
+
+    /* Look up the entire tile. */
+    data = new Buffer((TILE_WIDTH * TILE_HEIGHT) << 1);
+    lat = (max_lat - min_lat) / TILE_HEIGHT;
+    lon = (max_lon - min_lon) / TILE_WIDTH;
+    for(y = TILE_HEIGHT; y--; )
+      for(x = TILE_WIDTH; x--; )
+        data.writeUInt16LE(
+          tile(list, min_lat + y * lat, min_lon + x * lon, min_lat + (y + 1) * lat, min_lon + (x + 1) * lon, depth + 1),
+          (y * TILE_WIDTH + x) << 1
+        );
+
+    /* If the tile only contains a single timezone, return that time zone. */
+    for(i = TILE_WIDTH * TILE_HEIGHT; i--; ) {
+      /* If this tile recurses down, then it *definitely* doesn't contain a
+       * single timezone. */
+      if(data.readUInt16LE(i << 1) < 0xFE00)
+        break;
+
+      /* If this pixel doesn't match the top-left-most pixel, then this tile
+       * doesn't contain a single timezone. */
+      if(data.readUInt16LE(i << 1) !== data.readUInt16LE(0))
+        break;
+    }
+
+    /* If we didn't bail early, then all the pixels in this tile match. Return
+     * one. */
+    if(i === -1) {
+      console.warn("%s[%d,%d,%d,%d] => %s (all equal)", indent(depth), min_lat, min_lon, max_lat, max_lon, data.readUInt16LE(0) === 0xFFFF ? "empty" : zones.list[data.readUInt16LE(0) & 0x01FF]);
+      return data.readUInt16LE(0);
+    }
+
+    /* FIXME: We can be clever: if we're far enough down the tree, and either
+     * A) the tile consists of international waters and only one zone, or B)
+     * the tile consists overwhelmingly of one zone, then return the relevant
+     * zone. */
+
+    /* Otherwise, push the tile and return it's ID. */
+    if(tiles.length >= 0xFE00)
+      throw new Error("Too many tiles! Increase the tile resolution or decrease the max depth.");
+
+    console.warn("%s[%d,%d,%d,%d] => new tile", indent(depth), min_lat, min_lon, max_lat, max_lon);
+    tiles.push(data);
+    return tiles.length - 1;
   }
 
-  /* Compress every chunk with deflate. */
-  cpsmap(chunks, zlib.deflate, function(err, chunks) {
-    if(err)
-      throw err;
+  console.warn("TIMEZONE_LIST = %j", zones.list);
+  tile(polygons, -90.0, -180.0, +90.0, +180.0, 0);
 
-    var i, offsets, off, max, header, tz;
-
-    /* Compute the byte offset of each chunk. */
-    offsets = new Array(chunks.length);
-    offsets[0] = 0;
-    for(i = 1; i < offsets.length; i++)
-      offsets[i] = offsets[i - 1] + chunks[i - 1].length;
-
-    for(i = TILES_ACROSS * TILES_DOWN; i--; ) {
-      off = index.readInt32LE(i << 2);
-      if(off < 0)
-        continue;
-
-      if(offsets[off] >= 1048576)
-        throw new Error("offset is unindexable with 20 bits");
-
-      if(chunks[off].length >= 4096)
-        throw new Error("chunk size is unindexable with 12 bits");
-
-      index.writeInt32LE((offsets[off] << 12) | chunks[off].length, i << 2);
-    }
-
-    /* Compute the max length of an timezone string. */
-    max = 0;
-    for(i = zones.list.length; i--; ) {
-      off = Buffer.byteLength(zones.list[i]);
-      if(off > max)
-        max = off;
-    }
-
-    /* Write the header. */
-    header = new Buffer(12);
-    header.writeUInt16LE(TILES_ACROSS, 0);
-    header.writeUInt16LE(TILES_DOWN, 2);
-    header.writeUInt16LE(TILE_WIDTH, 4);
-    header.writeUInt16LE(TILE_HEIGHT, 6);
-    header.writeUInt16LE(zones.list.length, 8);
-    header.writeUInt16LE(max, 10);
-
-    /* Write the timezone index. */
-    tz = new Buffer(zones.list.length * max);
-    tz.fill(0);
-    for(i = zones.list.length; i--; )
-      tz.write(zones.list[i], i * max, max, "ascii");
-
-    process.stdout.write(header);
-    process.stdout.write(index);
-    process.stdout.write(tz);
-    for(i = 0; i < chunks.length; i++)
-      process.stdout.write(chunks[i]);
-  });
+  console.warn("TILE_COUNT = %d, FILE_LENGTH = %d", tiles.length, tiles.length * TILE_WIDTH * TILE_HEIGHT * 2);
+  process.stdout.write(Buffer.concat(tiles));
 });

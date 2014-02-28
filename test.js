@@ -4,28 +4,17 @@ describe("tz-lookup", function() {
   var lookup = require("./");
 
   function test(lat, lon, tzid) {
-    it("should return \"" + tzid + "\" given " + lat + ", " + lon, function(done) {
-      lookup(lat, lon, function(err, timezone) {
-        if(err)
-          return done(err);
-
-        expect(timezone).to.equal(tzid);
-        done();
-      });
+    it("should return \"" + tzid + "\" given " + lat + ", " + lon, function() {
+      expect(lookup(lat, lon)).to.equal(tzid);
     });
   }
 
   function fuzz(lat, lon, tzid) {
-    it("should return \"" + tzid + "\" (or something more specific) given " + lat + ", " + lon, function(done) {
-      lookup(lat, lon, function(err, timezone) {
-        if(err)
-          return done(err);
+    it("should return \"" + tzid + "\" (or something more specific) given " + lat + ", " + lon, function() {
+      var timezone = lookup(lat, lon);
 
-        if(tzid.slice(0, 3) !== "Etc" || timezone.slice(0, 3) === "Etc")
-          expect(timezone).to.equal(tzid);
-
-        done();
-      });
+      if(tzid.slice(0, 3) !== "Etc" || timezone.slice(0, 3) === "Etc")
+        expect(timezone).to.equal(tzid);
     });
   }
 
