@@ -157,7 +157,7 @@ module.exports = function(lat, lon) {
     v = y|0;
     y = (y - v) % 1.0;
 
-    t = DATA.readUInt16LE((t * TILE_WIDTH * TILE_HEIGHT + v * TILE_WIDTH + u) << 1);
+    t = DATA.readUInt16BE((t * TILE_WIDTH * TILE_HEIGHT + v * TILE_WIDTH + u) << 1);
   }
 
   t &= 0x01FF;

@@ -203,13 +203,33 @@ function tzindex(polygons) {
   return {list: list, hash: hash};
 }
 
-function indent(n) {
-  var str = "";
+function write(root) {
+  var queue = [],
+      nodes = [],
+      node, i, data, t, j;
 
-  while(n--)
-    str += "  ";
+  for(queue.push(root); node = queue.shift(); ) {
+    node.id = nodes.length;
+    nodes.push(node);
 
-  return str;
+    for(i = 0; i < node.data.length; i++)
+      if(typeof node.data[i] !== "number")
+        queue.push(node.data[i]);
+  }
+
+  data = new Buffer((nodes.length * TILE_WIDTH * TILE_HEIGHT) << 1);
+  
+  for(i = nodes.length; i--; ) {
+    node = nodes[i];
+
+    for(j = node.data.length; j--; )
+      data.writeUInt16BE(
+        typeof node.data[j] !== "number" ? node.data[j].id : node.data[j],
+        (node.id * TILE_WIDTH * TILE_HEIGHT + j) << 1
+      );
+  }
+
+  process.stdout.write(data);
 }
 
 console.warn("WIDTH = %d, HEIGHT = %d", Math.pow(TILE_WIDTH, MAX_DEPTH), Math.pow(TILE_HEIGHT, MAX_DEPTH));
@@ -217,8 +237,7 @@ readGeoJSON(path.join(__dirname, "tz_world.json"), function(err, polygons) {
   if(err)
     throw err;
 
-  var zones = tzindex(polygons),
-      tiles = [];
+  var zones = tzindex(polygons);
 
   function tile(polygons, min_lat, min_lon, max_lat, max_lon, depth) {
     var box = [
@@ -234,10 +253,8 @@ readGeoJSON(path.join(__dirname, "tz_world.json"), function(err, polygons) {
         list.push(polygons[i]);
 
     /* No polygons cover the area? Well then, just exit early. */
-    if(list.length === 0) {
-      console.warn("%s[%d,%d,%d,%d] => empty (no coverage)", indent(depth), min_lat, min_lon, max_lat, max_lon);
+    if(list.length === 0)
       return 0xFFFF;
-    }
 
     /* If we don't want to recurse any more, just return a single pixel. */
     if(depth === MAX_DEPTH) {
@@ -262,63 +279,42 @@ readGeoJSON(path.join(__dirname, "tz_world.json"), function(err, polygons) {
         dist = t;
       }
 
-      if(!best) {
-        console.warn("%s[%d,%d,%d,%d] => empty (max depth)", indent(depth), min_lat, min_lon, max_lat, max_lon);
-        return 0xFFFF;
-      }
-
-      console.warn("%s[%d,%d,%d,%d] => %s (max depth)", indent(depth), min_lat, min_lon, max_lat, max_lon, best.tzid);
-      return (zones.hash[best.tzid] & 0x01FF) | 0xFE00;
+      return best ? (zones.hash[best.tzid] | 0xFE00) : 0xFFFF;
     }
 
     /* Look up the entire tile. */
-    data = new Buffer((TILE_WIDTH * TILE_HEIGHT) << 1);
+    data = new Array(TILE_WIDTH * TILE_HEIGHT);
     lat = (max_lat - min_lat) / TILE_HEIGHT;
     lon = (max_lon - min_lon) / TILE_WIDTH;
     for(y = TILE_HEIGHT; y--; )
       for(x = TILE_WIDTH; x--; )
-        data.writeUInt16LE(
-          tile(list, min_lat + y * lat, min_lon + x * lon, min_lat + (y + 1) * lat, min_lon + (x + 1) * lon, depth + 1),
-          (y * TILE_WIDTH + x) << 1
+        data[y * TILE_WIDTH + x] = tile(
+          list,
+          min_lat + (TILE_HEIGHT - (y + 1)) * lat,
+          min_lon + (x + 0) * lon,
+          min_lat + (TILE_HEIGHT - (y + 0)) * lat,
+          min_lon + (x + 1) * lon,
+          depth + 1
         );
 
     /* If the tile only contains a single timezone, return that time zone. */
-    for(i = TILE_WIDTH * TILE_HEIGHT; i--; ) {
-      /* If this tile recurses down, then it *definitely* doesn't contain a
-       * single timezone. */
-      if(data.readUInt16LE(i << 1) < 0xFE00)
+    for(i = data.length; i--; )
+      if(data[i] !== data[0])
         break;
-
-      /* If this pixel doesn't match the top-left-most pixel, then this tile
-       * doesn't contain a single timezone. */
-      if(data.readUInt16LE(i << 1) !== data.readUInt16LE(0))
-        break;
-    }
 
     /* If we didn't bail early, then all the pixels in this tile match. Return
      * one. */
-    if(i === -1) {
-      console.warn("%s[%d,%d,%d,%d] => %s (all equal)", indent(depth), min_lat, min_lon, max_lat, max_lon, data.readUInt16LE(0) === 0xFFFF ? "empty" : zones.list[data.readUInt16LE(0) & 0x01FF]);
-      return data.readUInt16LE(0);
-    }
+    if(i === -1)
+      return data[0];
 
     /* FIXME: We can be clever: if we're far enough down the tree, and either
      * A) the tile consists of international waters and only one zone, or B)
      * the tile consists overwhelmingly of one zone, then return the relevant
      * zone. */
 
-    /* Otherwise, push the tile and return it's ID. */
-    if(tiles.length >= 0xFE00)
-      throw new Error("Too many tiles! Increase the tile resolution or decrease the max depth.");
-
-    console.warn("%s[%d,%d,%d,%d] => new tile", indent(depth), min_lat, min_lon, max_lat, max_lon);
-    tiles.push(data);
-    return tiles.length - 1;
+    return {id: -1, data: data};
   }
 
   console.warn("TIMEZONE_LIST = %j", zones.list);
-  tile(polygons, -90.0, -180.0, +90.0, +180.0, 0);
-
-  console.warn("TILE_COUNT = %d, FILE_LENGTH = %d", tiles.length, tiles.length * TILE_WIDTH * TILE_HEIGHT * 2);
-  process.stdout.write(Buffer.concat(tiles));
+  write(tile(polygons, -90.0, -180.0, +90.0, +180.0, 0));
 });
