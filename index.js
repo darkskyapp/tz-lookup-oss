@@ -1,6 +1,6 @@
 var DATA = require("fs").readFileSync(require("path").join(__dirname, "tz.bin")),
-    TILE_WIDTH = 8,
-    TILE_HEIGHT = 8,
+    TILE_WIDTH = 4,
+    TILE_HEIGHT = 4,
     TIMEZONE_LIST = [
       "Africa/Abidjan", "Africa/Accra", "Africa/Addis_Ababa", "Africa/Algiers",
       "Africa/Asmara", "Africa/Bamako", "Africa/Bangui", "Africa/Banjul",
@@ -135,7 +135,7 @@ var DATA = require("fs").readFileSync(require("path").join(__dirname, "tz.bin"))
     ];
 
 module.exports = function(lat, lon) {
-  var x, y, u, v, t;
+  var t, x, y, u, v;
 
   lat = +lat;
   lon = +lon;
@@ -143,21 +143,13 @@ module.exports = function(lat, lon) {
   if(!(lat >= -90.0 && lat <= +90.0 && lon >= -180.0 && lon <= +180.0))
     throw new new RangeError("invalid coordinates");
 
-  /* Rescale <lat,lon> into the range [0,1). */
-  x = (180.0 + lon) / 360.00000000000006;
-  y = ( 90.0 - lat) / 180.00000000000003;
   t = 0;
+  u = (x = ((180.0 + lon) / 360.00000000000006) * TILE_WIDTH )|0;
+  v = (y = (( 90.0 - lat) / 180.00000000000003) * TILE_HEIGHT)|0;
 
-  while((t & 0xFE00) !== 0xFE00) {
-    x *= TILE_WIDTH;
-    u = x|0;
-    x = (x - u) % 1.0;
-
-    y *= TILE_HEIGHT;
-    v = y|0;
-    y = (y - v) % 1.0;
-
-    t = DATA.readUInt16BE((t * TILE_WIDTH * TILE_HEIGHT + v * TILE_WIDTH + u) << 1);
+  while(((t = DATA.readUInt16BE(((t * TILE_HEIGHT + v) * TILE_WIDTH + u) << 1)) & 0xFE00) !== 0xFE00) {
+    u = (x = ((x - u) % 1.0) * TILE_WIDTH )|0;
+    v = (y = ((y - v) % 1.0) * TILE_HEIGHT)|0;
   }
 
   t &= 0x01FF;
