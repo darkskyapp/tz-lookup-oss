@@ -134,24 +134,20 @@ var DATA = require("fs").readFileSync(require("path").join(__dirname, "tz.bin"))
     ];
 
 module.exports = function(lat, lon) {
-  var x, y, u, v, t, i;
+  var t, x, y, u, v, i;
 
   lat = +lat;
   lon = +lon;
-  x = (180.0 + lon) / 360.00000000000006;
-  y = ( 90.0 - lat) / 180.00000000000003;
-
-  if(!(x >= 0.0 && x < 1.0 && y >= 0.0 && y < 1.0))
+  if(!(lat >= -90.0 && lat <= +90.0 && lon >= -180.0 && lon <= +180.0))
     throw new new RangeError("invalid coordinates");
 
-  u = (x *= SIZE)|0;
-  v = (y *= SIZE)|0;
   t = 0;
-
+  u = (x = (180.0 + lon) * SIZE / 360.00000000000006)|0;
+  v = (y = ( 90.0 - lat) * SIZE / 180.00000000000003)|0;
   while(((i = DATA.readUInt16BE(((t * SIZE + v) * SIZE + u) << 1)) & 0xFE00) !== 0xFE00) {
+    t += i;
     u = (x = ((x - u) % 1.0) * SIZE)|0;
     v = (y = ((y - v) % 1.0) * SIZE)|0;
-    t += i;
   }
 
   i &= 0x01FF;
