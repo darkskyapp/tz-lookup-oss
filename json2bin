@@ -2,9 +2,19 @@
 
 var fs   = require("fs"),
     path = require("path"),
-    SIZE            = 2,
-    MAX_DEPTH       = 12,
-    MAX_DISTANCE_SQ = 0.16;
+    COARSE_WIDTH    = 48,
+    COARSE_HEIGHT   = 24,
+    FINE_WIDTH      = 2,
+    FINE_HEIGHT     = 2,
+    MAX_DEPTH       = 8,
+    MAX_DISTANCE_SQ = 0.16,
+    TIMEZONE_INTERNATIONAL_LIST = [
+      "Etc/GMT+12", "Etc/GMT+11", "Etc/GMT+10", "Etc/GMT+9",  "Etc/GMT+8",
+      "Etc/GMT+7",  "Etc/GMT+6",  "Etc/GMT+5",  "Etc/GMT+4",  "Etc/GMT+3",
+      "Etc/GMT+2",  "Etc/GMT+1",  "Etc/GMT",    "Etc/GMT-1",  "Etc/GMT-2",
+      "Etc/GMT-3",  "Etc/GMT-4",  "Etc/GMT-5",  "Etc/GMT-6",  "Etc/GMT-7",
+      "Etc/GMT-8",  "Etc/GMT-9",  "Etc/GMT-10", "Etc/GMT-11", "Etc/GMT-12"
+    ];
 
 function bound(poly) {
   var bound = [
@@ -187,6 +197,9 @@ function tzindex(polygons) {
       list = [],
       i;
 
+  for(i = TIMEZONE_INTERNATIONAL_LIST.length; i--; )
+    hash[TIMEZONE_INTERNATIONAL_LIST[i]] = -1;
+
   for(i = polygons.length; i--; )
     hash[polygons[i].tzid] = -1;
 
@@ -205,25 +218,24 @@ function tzindex(polygons) {
 function write(root) {
   var queue = [],
       nodes = [],
+      len   = 0,
+      off   = 0,
       node, i, data, t, j;
 
   for(queue.push(root); node = queue.shift(); ) {
     node.id = nodes.length;
     nodes.push(node);
+    len += (node.width * node.height) << 1;
 
     for(i = 0; i < node.data.length; i++)
       if(typeof node.data[i] !== "number")
         queue.push(node.data[i]);
   }
 
-  if(nodes.length >= 0x10000)
-    throw new Error("too many tiles to fit in a short, sorry.");
-
-  data = new Buffer((nodes.length * SIZE * SIZE) << 1);
-
-  console.warn("TILE_COUNT = %d, BYTE_LENGTH = %d", nodes.length, data.length);
+  console.warn("TILE_COUNT = %d, BYTE_LENGTH = %d", nodes.length, len);
+  data = new Buffer(len);
   
-  for(i = nodes.length; i--; ) {
+  for(i = 0; i < nodes.length; i++) {
     node = nodes[i];
 
     for(j = node.data.length; j--; ) {
@@ -231,34 +243,38 @@ function write(root) {
         t = node.data[j];
 
       else {
-        t = node.data[j].id - node.id;
+        t = node.data[j].id - 1;
 
-        if(t < 0 || (t & 0xFE00) === 0xFE00)
+        if(t >= 0xFE00)
           throw new Error("too many tiles, sorry.");
       }
 
-      data.writeUInt16BE(t, (node.id * SIZE * SIZE + j) << 1);
+      data.writeUInt16BE(t, off + (j << 1));
     }
+
+    off += (node.width * node.height) << 1;
   }
 
   process.stdout.write(data);
 }
 
-console.warn("SIZE = %d, IMAGE_SIZE = %d", SIZE, Math.pow(SIZE, MAX_DEPTH));
 readGeoJSON(path.join(__dirname, "tz_world.json"), function(err, polygons) {
   if(err)
     throw err;
 
   var zones = tzindex(polygons);
 
-  function tile(polygons, min_lat, min_lon, max_lat, max_lon, depth) {
+  function tile(polygons, min_lat, min_lon, max_lat, max_lon, width, height, depth) {
     var box = [
           min_lon - MAX_DISTANCE_SQ,
           min_lat - MAX_DISTANCE_SQ,
           max_lon + MAX_DISTANCE_SQ,
           max_lat + MAX_DISTANCE_SQ
         ],
-        list = [], i, data, x, y, lat, lon, best, dist, t, flat;
+        lat = (min_lat + max_lat) * 0.5,
+        lon = (min_lon + max_lon) * 0.5,
+        list = [],
+        i, data, x, y, best, dist, t, flat, dlat, dlon;
 
     for(i = polygons.length; i--; )
       if(polygons[i].overlap(box))
@@ -266,7 +282,7 @@ readGeoJSON(path.join(__dirname, "tz_world.json"), function(err, polygons) {
 
     /* No polygons cover the area? Well then, just exit early. */
     if(list.length === 0)
-      return 0xFFFF;
+      return zones.hash[TIMEZONE_INTERNATIONAL_LIST[Math.round((180.0 + lon) / 15.0)]] | 0xFE00;
 
     /* Only one does? Then use it. (This isn't actually accurate, but our
      * compression is actually lossy. Furthermore, this just means that some
@@ -277,9 +293,6 @@ readGeoJSON(path.join(__dirname, "tz_world.json"), function(err, polygons) {
 
     /* If we don't want to recurse any more, just return a single pixel. */
     if(depth === MAX_DEPTH) {
-      lat = (min_lat + max_lat) * 0.5;
-      lon = (min_lon + max_lon) * 0.5;
-
       best = null;
       dist = MAX_DISTANCE_SQ;
       for(i = list.length; i--; ) {
@@ -298,26 +311,28 @@ readGeoJSON(path.join(__dirname, "tz_world.json"), function(err, polygons) {
         dist = t;
       }
 
-      return best ? (zones.hash[best.tzid] | 0xFE00) : 0xFFFF;
+      return zones.hash[best ? best.tzid : TIMEZONE_INTERNATIONAL_LIST[Math.round((180.0 + lon) / 15.0)]] | 0xFE00;
     }
 
     /* Look up the entire tile. */
-    data = new Array(SIZE * SIZE);
+    data = new Array(width * height);
     flat = true;
-    lat  = (max_lat - min_lat) / SIZE;
-    lon  = (max_lon - min_lon) / SIZE;
-    for(y = SIZE; y--; ) {
-      for(x = SIZE; x--; ) {
+    dlat = (max_lat - min_lat) / height;
+    dlon = (max_lon - min_lon) / width;
+    for(y = height; y--; ) {
+      for(x = width; x--; ) {
         t = tile(
           list,
-          min_lat + (SIZE - (y + 1)) * lat,
-          min_lon + (x + 0) * lon,
-          min_lat + (SIZE - (y + 0)) * lat,
-          min_lon + (x + 1) * lon,
+          min_lat + (height - (y + 1)) * dlat,
+          min_lon + (x + 0) * dlon,
+          min_lat + (height - (y + 0)) * dlat,
+          min_lon + (x + 1) * dlon,
+          FINE_WIDTH,
+          FINE_HEIGHT,
           depth + 1
         );
 
-        data[y * SIZE + x] = t;
+        data[y * width + x] = t;
 
         if(typeof t !== "number")
           flat = false;
@@ -331,7 +346,10 @@ readGeoJSON(path.join(__dirname, "tz_world.json"), function(err, polygons) {
       t = 0xFFFF;
 
       for(i = data.length; i--; ) {
-        if(data[i] === 0xFFFF || data[i] === t)
+        if(data[i] === t)
+          continue;
+
+        if(zones.list[data[i] & 0x01FF].slice(0, 3) === "Etc")
           continue;
 
         if(t !== 0xFFFF)
@@ -340,13 +358,17 @@ readGeoJSON(path.join(__dirname, "tz_world.json"), function(err, polygons) {
         t = data[i];
       }
 
-      if(i === -1)
+      if(i === -1) {
+        if(t === 0xFFFF)
+          t = zones.hash[TIMEZONE_INTERNATIONAL_LIST[Math.round((180.0 + lon) / 15.0)]] | 0xFE00;
+
         return t;
+      }
     }
 
-    return {id: -1, data: data};
+    return {id: -1, width: width, height: height, data: data};
   }
 
   console.warn("TIMEZONE_LIST = %j", zones.list);
-  write(tile(polygons, -90.0, -180.0, +90.0, +180.0, 0));
+  write(tile(polygons, -90.0, -180.0, +90.0, +180.0, COARSE_WIDTH, COARSE_HEIGHT, 0));
 });

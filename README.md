@@ -19,9 +19,33 @@ To use:
     > console.log(tz(42.7235, -73.6931));
     "America/New_York"
 
-Previous versions of this module have experimented with a half-dozen different
-mechanisms for storing the timezone data on disk. The current version uses a
-single binary data file that essentially acts as a giant compressed bitmap,
-storing a timezone for each pixel on the globe. This is not perfectly accurate
-(since the source data is vector), but is very quick and easy to read from and
-ought to be more than accurate enough for most use-cases.
+**Please take note of the following:**
+
+*   The exported functionc all will throw an error if the latitude or longitude
+    provided are NaN or out of bounds. Otherwise, it will never throw an error
+    and will always return an IANA timezone database string.
+*   The exported function call is synchronous. Previous versions of this module
+    were asynchronous, due to the timezone database being too large to
+    conveniently fit in memory. Thanks to very careful data compression, this
+    is no longer the case.
+*   The timezones returned by this module are approximate: since the timezone
+    database is so large, lossy compression is necessary for fast lookups. In
+    particular, the compression used may be of insufficient resolution for
+    several very small timezones (such as Europe/Vatican) and favors country
+    timezones over GMT offsets (and so may exaggerate the distance of
+    territorial waters). However, the level of accuracy should be adequate for
+    most purposes. (For example, this module is used by the [Forecast API][1]
+    for global timezone lookups.)
+
+If you find a real-world case where this modules accuracy is inadequate, please
+open an issue (or, better yet, submit a pull request with a failing test) and
+I'll see what I can do to increase the accuracy for you.
+
+Timezone data is from Eric Muller's excellent [TZ timezone maps][2]. To
+regenerate the compressed database, simply download his `tz_world` shapefile,
+convert it to a GeoJSON using GDAL, put it in the project directory (with the
+name `tz_world.json`), and run `json2bin >tz.bin`. The timezone database was
+last updated on 26 Nov 2013.
+
+[1]: https://forecast.io/
+[2]: http://efele.net/maps/tz/

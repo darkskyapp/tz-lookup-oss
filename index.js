@@ -1,5 +1,8 @@
 var DATA = require("fs").readFileSync(require("path").join(__dirname, "tz.bin")),
-    SIZE = 2,
+    COARSE_WIDTH  = 48,
+    COARSE_HEIGHT = 24,
+    FINE_WIDTH    = 2,
+    FINE_HEIGHT   = 2,
     TIMEZONE_LIST = [
       "Africa/Abidjan", "Africa/Accra", "Africa/Addis_Ababa", "Africa/Algiers",
       "Africa/Asmara", "Africa/Bamako", "Africa/Bangui", "Africa/Banjul",
@@ -93,18 +96,23 @@ var DATA = require("fs").readFileSync(require("path").join(__dirname, "tz.bin"))
       "Australia/Adelaide", "Australia/Brisbane", "Australia/Broken_Hill",
       "Australia/Currie", "Australia/Darwin", "Australia/Eucla",
       "Australia/Hobart", "Australia/Lindeman", "Australia/Lord_Howe",
-      "Australia/Melbourne", "Australia/Perth", "Australia/Sydney",
-      "Europe/Amsterdam", "Europe/Andorra", "Europe/Athens", "Europe/Belgrade",
-      "Europe/Berlin", "Europe/Bratislava", "Europe/Brussels",
-      "Europe/Bucharest", "Europe/Budapest", "Europe/Chisinau",
-      "Europe/Copenhagen", "Europe/Dublin", "Europe/Gibraltar",
-      "Europe/Guernsey", "Europe/Helsinki", "Europe/Isle_of_Man",
-      "Europe/Istanbul", "Europe/Jersey", "Europe/Kaliningrad", "Europe/Kiev",
-      "Europe/Lisbon", "Europe/Ljubljana", "Europe/London",
-      "Europe/Luxembourg", "Europe/Madrid", "Europe/Malta", "Europe/Mariehamn",
-      "Europe/Minsk", "Europe/Monaco", "Europe/Moscow", "Europe/Oslo",
-      "Europe/Paris", "Europe/Podgorica", "Europe/Prague", "Europe/Riga",
-      "Europe/Rome", "Europe/Samara", "Europe/San_Marino", "Europe/Sarajevo",
+      "Australia/Melbourne", "Australia/Perth", "Australia/Sydney", "Etc/GMT",
+      "Etc/GMT+1", "Etc/GMT+10", "Etc/GMT+11", "Etc/GMT+12", "Etc/GMT+2",
+      "Etc/GMT+3", "Etc/GMT+4", "Etc/GMT+5", "Etc/GMT+6", "Etc/GMT+7",
+      "Etc/GMT+8", "Etc/GMT+9", "Etc/GMT-1", "Etc/GMT-10", "Etc/GMT-11",
+      "Etc/GMT-12", "Etc/GMT-2", "Etc/GMT-3", "Etc/GMT-4", "Etc/GMT-5",
+      "Etc/GMT-6", "Etc/GMT-7", "Etc/GMT-8", "Etc/GMT-9", "Europe/Amsterdam",
+      "Europe/Andorra", "Europe/Athens", "Europe/Belgrade", "Europe/Berlin",
+      "Europe/Bratislava", "Europe/Brussels", "Europe/Bucharest",
+      "Europe/Budapest", "Europe/Chisinau", "Europe/Copenhagen",
+      "Europe/Dublin", "Europe/Gibraltar", "Europe/Guernsey",
+      "Europe/Helsinki", "Europe/Isle_of_Man", "Europe/Istanbul",
+      "Europe/Jersey", "Europe/Kaliningrad", "Europe/Kiev", "Europe/Lisbon",
+      "Europe/Ljubljana", "Europe/London", "Europe/Luxembourg",
+      "Europe/Madrid", "Europe/Malta", "Europe/Mariehamn", "Europe/Minsk",
+      "Europe/Monaco", "Europe/Moscow", "Europe/Oslo", "Europe/Paris",
+      "Europe/Podgorica", "Europe/Prague", "Europe/Riga", "Europe/Rome",
+      "Europe/Samara", "Europe/San_Marino", "Europe/Sarajevo",
       "Europe/Simferopol", "Europe/Skopje", "Europe/Sofia", "Europe/Stockholm",
       "Europe/Tallinn", "Europe/Tirane", "Europe/Uzhgorod", "Europe/Vaduz",
       "Europe/Vatican", "Europe/Vienna", "Europe/Vilnius", "Europe/Volgograd",
@@ -124,34 +132,33 @@ var DATA = require("fs").readFileSync(require("path").join(__dirname, "tz.bin"))
       "Pacific/Port_Moresby", "Pacific/Rarotonga", "Pacific/Saipan",
       "Pacific/Tahiti", "Pacific/Tarawa", "Pacific/Tongatapu", "Pacific/Wake",
       "Pacific/Wallis"
-    ],
-    TIMEZONE_INTERNATIONAL_LIST = [
-      "Etc/GMT+12", "Etc/GMT+11", "Etc/GMT+10", "Etc/GMT+9",  "Etc/GMT+8",
-      "Etc/GMT+7",  "Etc/GMT+6",  "Etc/GMT+5",  "Etc/GMT+4",  "Etc/GMT+3",
-      "Etc/GMT+2",  "Etc/GMT+1",  "Etc/GMT",    "Etc/GMT-1",  "Etc/GMT-2",
-      "Etc/GMT-3",  "Etc/GMT-4",  "Etc/GMT-5",  "Etc/GMT-6",  "Etc/GMT-7",
-      "Etc/GMT-8",  "Etc/GMT-9",  "Etc/GMT-10", "Etc/GMT-11", "Etc/GMT-12"
     ];
 
 module.exports = function(lat, lon) {
-  var t, x, y, u, v, i;
+  var x, y, u, v, t;
 
+  /* Make sure lat/lon are valid numbers. (It is unusual to check for the
+   * negation of whether the values are in range, but this form works for NaNs,
+   * too!) */
   lat = +lat;
   lon = +lon;
   if(!(lat >= -90.0 && lat <= +90.0 && lon >= -180.0 && lon <= +180.0))
     throw new new RangeError("invalid coordinates");
 
-  t = 0;
-  u = (x = (180.0 + lon) * SIZE / 360.00000000000006)|0;
-  v = (y = ( 90.0 - lat) * SIZE / 180.00000000000003)|0;
-  while(((i = DATA.readUInt16BE(((t * SIZE + v) * SIZE + u) << 1)) & 0xFE00) !== 0xFE00) {
-    t += i;
-    u = (x = ((x - u) % 1.0) * SIZE)|0;
-    v = (y = ((y - v) % 1.0) * SIZE)|0;
+  /* The root node of the tree is wider than a normal node, acting essentially
+   * as a "flattened" few layers of the tree. This saves a bit of overhead,
+   * since the topmost nodes will probably all be full. */
+  u = (x = (180.0 + lon) * COARSE_WIDTH  / 360.00000000000006)|0;
+  v = (y = ( 90.0 - lat) * COARSE_HEIGHT / 180.00000000000003)|0;
+  t = DATA.readUInt16BE((v * COARSE_WIDTH + u) << 1);
+
+  /* Recurse until we hit a leaf node. */
+  while(t < 0xFE00) {
+    u = (x = ((x - u) % 1.0) * FINE_WIDTH )|0;
+    v = (y = ((y - v) % 1.0) * FINE_HEIGHT)|0;
+    t = DATA.readUInt16BE((COARSE_WIDTH * COARSE_HEIGHT + (t * FINE_WIDTH + v) * FINE_HEIGHT + u) << 1);
   }
 
-  i &= 0x01FF;
-  return i < TIMEZONE_LIST.length ?
-    TIMEZONE_LIST[i] :
-    TIMEZONE_INTERNATIONAL_LIST[Math.round((180.0 + lon) / 15.0)];
+  /* Once we hit a leaf, return the relevant timezone. */
+  return TIMEZONE_LIST[t & 0x01FF];
 };
