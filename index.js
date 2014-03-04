@@ -1,5 +1,5 @@
 var DATA = require("fs").readFileSync(require("path").join(__dirname, "tz.bin")),
-    SIZE = 4,
+    SIZE = 2,
     TIMEZONE_LIST = [
       "Africa/Abidjan", "Africa/Accra", "Africa/Addis_Ababa", "Africa/Algiers",
       "Africa/Asmara", "Africa/Bamako", "Africa/Bangui", "Africa/Banjul",
@@ -134,25 +134,28 @@ var DATA = require("fs").readFileSync(require("path").join(__dirname, "tz.bin"))
     ];
 
 module.exports = function(lat, lon) {
-  var t, x, y, u, v;
+  var x, y, u, v, t, i;
 
-  lat =  90.0 - lat;
-  lon = 180.0 + lon;
+  lat = +lat;
+  lon = +lon;
+  x = (180.0 + lon) / 360.00000000000006;
+  y = ( 90.0 - lat) / 180.00000000000003;
 
-  if(!(lat >= 0.0 && lat <= 180.0 && lon >= 0.0 && lon <= 360.0))
+  if(!(x >= 0.0 && x < 1.0 && y >= 0.0 && y < 1.0))
     throw new new RangeError("invalid coordinates");
 
+  u = (x *= SIZE)|0;
+  v = (y *= SIZE)|0;
   t = 0;
-  u = (x = lon * SIZE / 360.00000000000006)|0;
-  v = (y = lat * SIZE / 180.00000000000003)|0;
 
-  while(((t = DATA.readUInt16BE(((t * SIZE + v) * SIZE + u) << 1)) & 0xFE00) !== 0xFE00) {
+  while(((i = DATA.readUInt16BE(((t * SIZE + v) * SIZE + u) << 1)) & 0xFE00) !== 0xFE00) {
     u = (x = ((x - u) % 1.0) * SIZE)|0;
     v = (y = ((y - v) % 1.0) * SIZE)|0;
+    t += i;
   }
 
-  t &= 0x01FF;
-  return t < TIMEZONE_LIST.length ?
-    TIMEZONE_LIST[t] :
-    TIMEZONE_INTERNATIONAL_LIST[Math.round(lon / 15.0)];
+  i &= 0x01FF;
+  return i < TIMEZONE_LIST.length ?
+    TIMEZONE_LIST[i] :
+    TIMEZONE_INTERNATIONAL_LIST[Math.round((180.0 + lon) / 15.0)];
 };

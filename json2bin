@@ -2,8 +2,8 @@
 
 var fs   = require("fs"),
     path = require("path"),
-    SIZE            = 4,
-    MAX_DEPTH       = 7,
+    SIZE            = 2,
+    MAX_DEPTH       = 12,
     MAX_DISTANCE_SQ = 0.16;
 
 function bound(poly) {
@@ -216,16 +216,29 @@ function write(root) {
         queue.push(node.data[i]);
   }
 
+  if(nodes.length >= 0x10000)
+    throw new Error("too many tiles to fit in a short, sorry.");
+
   data = new Buffer((nodes.length * SIZE * SIZE) << 1);
+
+  console.warn("TILE_COUNT = %d, BYTE_LENGTH = %d", nodes.length, data.length);
   
   for(i = nodes.length; i--; ) {
     node = nodes[i];
 
-    for(j = node.data.length; j--; )
-      data.writeUInt16BE(
-        typeof node.data[j] !== "number" ? node.data[j].id : node.data[j],
-        (node.id * SIZE * SIZE + j) << 1
-      );
+    for(j = node.data.length; j--; ) {
+      if(typeof node.data[j] === "number")
+        t = node.data[j];
+
+      else {
+        t = node.data[j].id - node.id;
+
+        if(t < 0 || (t & 0xFE00) === 0xFE00)
+          throw new Error("too many tiles, sorry.");
+      }
+
+      data.writeUInt16BE(t, (node.id * SIZE * SIZE + j) << 1);
+    }
   }
 
   process.stdout.write(data);
@@ -254,6 +267,13 @@ readGeoJSON(path.join(__dirname, "tz_world.json"), function(err, polygons) {
     /* No polygons cover the area? Well then, just exit early. */
     if(list.length === 0)
       return 0xFFFF;
+
+    /* Only one does? Then use it. (This isn't actually accurate, but our
+     * compression is actually lossy. Furthermore, this just means that some
+     * places will be considered land instead of ocean, which is actually
+     * helpful for our use-case.) */
+    if(list.length === 1)
+      return zones.hash[list[0].tzid] | 0xFE00;
 
     /* If we don't want to recurse any more, just return a single pixel. */
     if(depth === MAX_DEPTH) {
@@ -304,6 +324,9 @@ readGeoJSON(path.join(__dirname, "tz_world.json"), function(err, polygons) {
       }
     }
 
+    /* Check to see if there's only one non-ocean color. If so, use it. If not,
+     * if the only color is ocean, use that. Otherwise, I guess we have to
+     * return the whole thing, oh well. */
     if(flat) {
       t = 0xFFFF;
 
