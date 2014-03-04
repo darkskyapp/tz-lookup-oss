@@ -156,7 +156,7 @@ module.exports = function(lat, lon) {
   while(t < 0xFE00) {
     u = (x = ((x - u) % 1.0) * FINE_WIDTH )|0;
     v = (y = ((y - v) % 1.0) * FINE_HEIGHT)|0;
-    t = DATA.readUInt16BE((COARSE_WIDTH * COARSE_HEIGHT + (t * FINE_WIDTH + v) * FINE_HEIGHT + u) << 1);
+    t = DATA.readUInt16BE((COARSE_WIDTH * COARSE_HEIGHT + (t * FINE_HEIGHT + v) * FINE_WIDTH + u) << 1);
   }
 
   /* Once we hit a leaf, return the relevant timezone. */
