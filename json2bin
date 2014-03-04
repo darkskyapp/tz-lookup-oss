@@ -2,10 +2,9 @@
 
 var fs   = require("fs"),
     path = require("path"),
-    MAX_DISTANCE_SQ = 0.16,
-    TILE_WIDTH      = 8,
-    TILE_HEIGHT     = 8,
-    MAX_DEPTH       = 3;
+    SIZE            = 4,
+    MAX_DEPTH       = 7,
+    MAX_DISTANCE_SQ = 0.16;
 
 function bound(poly) {
   var bound = [
@@ -217,7 +216,7 @@ function write(root) {
         queue.push(node.data[i]);
   }
 
-  data = new Buffer((nodes.length * TILE_WIDTH * TILE_HEIGHT) << 1);
+  data = new Buffer((nodes.length * SIZE * SIZE) << 1);
   
   for(i = nodes.length; i--; ) {
     node = nodes[i];
@@ -225,14 +224,14 @@ function write(root) {
     for(j = node.data.length; j--; )
       data.writeUInt16BE(
         typeof node.data[j] !== "number" ? node.data[j].id : node.data[j],
-        (node.id * TILE_WIDTH * TILE_HEIGHT + j) << 1
+        (node.id * SIZE * SIZE + j) << 1
       );
   }
 
   process.stdout.write(data);
 }
 
-console.warn("WIDTH = %d, HEIGHT = %d", Math.pow(TILE_WIDTH, MAX_DEPTH), Math.pow(TILE_HEIGHT, MAX_DEPTH));
+console.warn("SIZE = %d, IMAGE_SIZE = %d", SIZE, Math.pow(SIZE, MAX_DEPTH));
 readGeoJSON(path.join(__dirname, "tz_world.json"), function(err, polygons) {
   if(err)
     throw err;
@@ -246,7 +245,7 @@ readGeoJSON(path.join(__dirname, "tz_world.json"), function(err, polygons) {
           max_lon + MAX_DISTANCE_SQ,
           max_lat + MAX_DISTANCE_SQ
         ],
-        list = [], i, data, x, y, lat, lon, best, dist, t;
+        list = [], i, data, x, y, lat, lon, best, dist, t, flat;
 
     for(i = polygons.length; i--; )
       if(polygons[i].overlap(box))
@@ -283,34 +282,44 @@ readGeoJSON(path.join(__dirname, "tz_world.json"), function(err, polygons) {
     }
 
     /* Look up the entire tile. */
-    data = new Array(TILE_WIDTH * TILE_HEIGHT);
-    lat = (max_lat - min_lat) / TILE_HEIGHT;
-    lon = (max_lon - min_lon) / TILE_WIDTH;
-    for(y = TILE_HEIGHT; y--; )
-      for(x = TILE_WIDTH; x--; )
-        data[y * TILE_WIDTH + x] = tile(
+    data = new Array(SIZE * SIZE);
+    flat = true;
+    lat  = (max_lat - min_lat) / SIZE;
+    lon  = (max_lon - min_lon) / SIZE;
+    for(y = SIZE; y--; ) {
+      for(x = SIZE; x--; ) {
+        t = tile(
           list,
-          min_lat + (TILE_HEIGHT - (y + 1)) * lat,
+          min_lat + (SIZE - (y + 1)) * lat,
           min_lon + (x + 0) * lon,
-          min_lat + (TILE_HEIGHT - (y + 0)) * lat,
+          min_lat + (SIZE - (y + 0)) * lat,
           min_lon + (x + 1) * lon,
           depth + 1
         );
 
-    /* If the tile only contains a single timezone, return that time zone. */
-    for(i = data.length; i--; )
-      if(data[i] !== data[0])
-        break;
+        data[y * SIZE + x] = t;
 
-    /* If we didn't bail early, then all the pixels in this tile match. Return
-     * one. */
-    if(i === -1)
-      return data[0];
+        if(typeof t !== "number")
+          flat = false;
+      }
+    }
 
-    /* FIXME: We can be clever: if we're far enough down the tree, and either
-     * A) the tile consists of international waters and only one zone, or B)
-     * the tile consists overwhelmingly of one zone, then return the relevant
-     * zone. */
+    if(flat) {
+      t = 0xFFFF;
+
+      for(i = data.length; i--; ) {
+        if(data[i] === 0xFFFF || data[i] === t)
+          continue;
+
+        if(t !== 0xFFFF)
+          break;
+
+        t = data[i];
+      }
+
+      if(i === -1)
+        return t;
+    }
 
     return {id: -1, data: data};
   }

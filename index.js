@@ -1,6 +1,5 @@
 var DATA = require("fs").readFileSync(require("path").join(__dirname, "tz.bin")),
-    TILE_WIDTH = 4,
-    TILE_HEIGHT = 4,
+    SIZE = 4,
     TIMEZONE_LIST = [
       "Africa/Abidjan", "Africa/Accra", "Africa/Addis_Ababa", "Africa/Algiers",
       "Africa/Asmara", "Africa/Bamako", "Africa/Bangui", "Africa/Banjul",
@@ -127,33 +126,33 @@ var DATA = require("fs").readFileSync(require("path").join(__dirname, "tz.bin"))
       "Pacific/Wallis"
     ],
     TIMEZONE_INTERNATIONAL_LIST = [
-      "Etc/GMT+12", "Etc/GMT+11", "Etc/GMT+10", "Etc/GMT+9", "Etc/GMT+8",
-      "Etc/GMT+7", "Etc/GMT+6", "Etc/GMT+5", "Etc/GMT+4", "Etc/GMT+3",
-      "Etc/GMT+2", "Etc/GMT+1", "Etc/GMT", "Etc/GMT-1", "Etc/GMT-2",
-      "Etc/GMT-3", "Etc/GMT-4", "Etc/GMT-5", "Etc/GMT-6", "Etc/GMT-7",
-      "Etc/GMT-8", "Etc/GMT-9", "Etc/GMT-10", "Etc/GMT-11", "Etc/GMT-12"
+      "Etc/GMT+12", "Etc/GMT+11", "Etc/GMT+10", "Etc/GMT+9",  "Etc/GMT+8",
+      "Etc/GMT+7",  "Etc/GMT+6",  "Etc/GMT+5",  "Etc/GMT+4",  "Etc/GMT+3",
+      "Etc/GMT+2",  "Etc/GMT+1",  "Etc/GMT",    "Etc/GMT-1",  "Etc/GMT-2",
+      "Etc/GMT-3",  "Etc/GMT-4",  "Etc/GMT-5",  "Etc/GMT-6",  "Etc/GMT-7",
+      "Etc/GMT-8",  "Etc/GMT-9",  "Etc/GMT-10", "Etc/GMT-11", "Etc/GMT-12"
     ];
 
 module.exports = function(lat, lon) {
   var t, x, y, u, v;
 
-  lat = +lat;
-  lon = +lon;
+  lat =  90.0 - lat;
+  lon = 180.0 + lon;
 
-  if(!(lat >= -90.0 && lat <= +90.0 && lon >= -180.0 && lon <= +180.0))
+  if(!(lat >= 0.0 && lat <= 180.0 && lon >= 0.0 && lon <= 360.0))
     throw new new RangeError("invalid coordinates");
 
   t = 0;
-  u = (x = ((180.0 + lon) / 360.00000000000006) * TILE_WIDTH )|0;
-  v = (y = (( 90.0 - lat) / 180.00000000000003) * TILE_HEIGHT)|0;
+  u = (x = lon * SIZE / 360.00000000000006)|0;
+  v = (y = lat * SIZE / 180.00000000000003)|0;
 
-  while(((t = DATA.readUInt16BE(((t * TILE_HEIGHT + v) * TILE_WIDTH + u) << 1)) & 0xFE00) !== 0xFE00) {
-    u = (x = ((x - u) % 1.0) * TILE_WIDTH )|0;
-    v = (y = ((y - v) % 1.0) * TILE_HEIGHT)|0;
+  while(((t = DATA.readUInt16BE(((t * SIZE + v) * SIZE + u) << 1)) & 0xFE00) !== 0xFE00) {
+    u = (x = ((x - u) % 1.0) * SIZE)|0;
+    v = (y = ((y - v) % 1.0) * SIZE)|0;
   }
 
   t &= 0x01FF;
   return t < TIMEZONE_LIST.length ?
     TIMEZONE_LIST[t] :
-    TIMEZONE_INTERNATIONAL_LIST[Math.round((180.0 + lon) / 15.0)];
+    TIMEZONE_INTERNATIONAL_LIST[Math.round(lon / 15.0)];
 };
