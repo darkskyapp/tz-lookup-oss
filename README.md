@@ -41,6 +41,9 @@ If you find a real-world case where this module's accuracy is inadequate,
 please open an issue (or, better yet, submit a pull request with a failing
 test) and I'll see what I can do to increase the accuracy for you.
 
+Sources
+-------
+
 Timezone data is from Eric Muller's excellent [TZ timezone maps][2]. To
 regenerate the compressed database, simply download his `tz_world` shapefile,
 convert it to a GeoJSON using GDAL, put it in the project directory (with the
