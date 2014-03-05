@@ -590,7 +590,6 @@ describe("tz-lookup", function() {
   fuzz( -1.7834, -156.6977, "Etc/GMT+10");
   fuzz(-71.6264,  166.6398, "Etc/GMT-11");
   fuzz(-20.7129,   -5.4805, "Etc/GMT");
-  fuzz( 59.1579,  132.6019, "Asia/Vladivostok");
   fuzz(-74.1031, -147.1960, "Etc/GMT+10");
   fuzz( -9.2480,  162.6285, "Etc/GMT-11");
   fuzz( 78.7594,  111.3550, "Etc/GMT-7");
