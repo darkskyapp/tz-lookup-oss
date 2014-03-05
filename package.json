@@ -1,7 +1,7 @@
 {
   "name": "tz-lookup",
   "version": "6.0.0",
-  "description": "time zone lookup",
+  "description": "fast time zone lookup",
   "keywords": [
     "tz",
     "timezone",
