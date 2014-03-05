@@ -1,8 +1,6 @@
-var DATA = require("fs").readFileSync(require("path").join(__dirname, "tz.bin")),
-    COARSE_WIDTH  = 48,
-    COARSE_HEIGHT = 24,
-    FINE_WIDTH    = 2,
-    FINE_HEIGHT   = 2,
+var DATA = require("fs").readFileSync(
+      require("path").join(__dirname, "tz.bin")
+    ),
     TIMEZONE_LIST = [
       "Africa/Abidjan", "Africa/Accra", "Africa/Addis_Ababa", "Africa/Algiers",
       "Africa/Asmara", "Africa/Bamako", "Africa/Bangui", "Africa/Banjul",
@@ -132,10 +130,15 @@ var DATA = require("fs").readFileSync(require("path").join(__dirname, "tz.bin"))
       "Pacific/Port_Moresby", "Pacific/Rarotonga", "Pacific/Saipan",
       "Pacific/Tahiti", "Pacific/Tarawa", "Pacific/Tongatapu", "Pacific/Wake",
       "Pacific/Wallis"
-    ];
+    ],
+    COARSE_WIDTH  = 48,
+    COARSE_HEIGHT = 24,
+    FINE_WIDTH    = 2,
+    FINE_HEIGHT   = 2,
+    MAX_TILES     = 65536 - TIMEZONE_LIST.length;
 
 module.exports = function(lat, lon) {
-  var x, y, u, v, t;
+  var x, u, y, v, t, i;
 
   /* Make sure lat/lon are valid numbers. (It is unusual to check for the
    * negation of whether the values are in range, but this form works for NaNs,
@@ -150,15 +153,17 @@ module.exports = function(lat, lon) {
    * since the topmost nodes will probably all be full. */
   u = (x = (180.0 + lon) * COARSE_WIDTH  / 360.00000000000006)|0;
   v = (y = ( 90.0 - lat) * COARSE_HEIGHT / 180.00000000000003)|0;
-  t = DATA.readUInt16BE((v * COARSE_WIDTH + u) << 1);
+  t = -1;
+  i = DATA.readUInt16BE((v * COARSE_WIDTH + u) << 1);
 
   /* Recurse until we hit a leaf node. */
-  while(t < 0xFE00) {
+  while(i < MAX_TILES) {
     u = (x = ((x - u) % 1.0) * FINE_WIDTH )|0;
     v = (y = ((y - v) % 1.0) * FINE_HEIGHT)|0;
-    t = DATA.readUInt16BE((COARSE_WIDTH * COARSE_HEIGHT + (t * FINE_HEIGHT + v) * FINE_WIDTH + u) << 1);
+    t = t + i + 1;
+    i = DATA.readUInt16BE((COARSE_WIDTH * COARSE_HEIGHT + (t * FINE_HEIGHT + v) * FINE_WIDTH + u) << 1);
   }
 
   /* Once we hit a leaf, return the relevant timezone. */
-  return TIMEZONE_LIST[t & 0x01FF];
+  return TIMEZONE_LIST[i - MAX_TILES];
 };

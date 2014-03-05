@@ -6,7 +6,7 @@ var fs   = require("fs"),
     COARSE_HEIGHT   = 24,
     FINE_WIDTH      = 2,
     FINE_HEIGHT     = 2,
-    MAX_DEPTH       = 8,
+    MAX_DEPTH       = 9,
     MAX_DISTANCE_SQ = 0.16,
     TIMEZONE_INTERNATIONAL_LIST = [
       "Etc/GMT+12", "Etc/GMT+11", "Etc/GMT+10", "Etc/GMT+9",  "Etc/GMT+8",
@@ -215,11 +215,12 @@ function tzindex(polygons) {
   return {list: list, hash: hash};
 }
 
-function write(root) {
+function write(root, nzones) {
   var queue = [],
       nodes = [],
       len   = 0,
       off   = 0,
+      max   = 0x10000 - nzones,
       node, i, data, t, j;
 
   for(queue.push(root); node = queue.shift(); ) {
@@ -232,6 +233,7 @@ function write(root) {
         queue.push(node.data[i]);
   }
 
+  fs.writeFileSync("moop.json", JSON.stringify(root));
   console.warn("TILE_COUNT = %d, BYTE_LENGTH = %d", nodes.length, len);
   data = new Buffer(len);
   
@@ -243,9 +245,11 @@ function write(root) {
         t = node.data[j];
 
       else {
-        t = node.data[j].id - 1;
+        /* We can subtract 1 since indices are unique; thus we never need to
+         * worry about t being zero before the subtraction. */
+        t = (node.data[j].id - node.id) - 1;
 
-        if(t >= 0xFE00)
+        if(t >= max)
           throw new Error("too many tiles, sorry.");
       }
 
@@ -282,14 +286,14 @@ readGeoJSON(path.join(__dirname, "tz_world.json"), function(err, polygons) {
 
     /* No polygons cover the area? Well then, just exit early. */
     if(list.length === 0)
-      return zones.hash[TIMEZONE_INTERNATIONAL_LIST[Math.round((180.0 + lon) / 15.0)]] | 0xFE00;
+      return (0x10000 - zones.list.length) + zones.hash[TIMEZONE_INTERNATIONAL_LIST[Math.round((180.0 + lon) / 15.0)]];
 
     /* Only one does? Then use it. (This isn't actually accurate, but our
      * compression is actually lossy. Furthermore, this just means that some
      * places will be considered land instead of ocean, which is actually
      * helpful for our use-case.) */
     if(list.length === 1)
-      return zones.hash[list[0].tzid] | 0xFE00;
+      return (0x10000 - zones.list.length) + zones.hash[list[0].tzid];
 
     /* If we don't want to recurse any more, just return a single pixel. */
     if(depth === MAX_DEPTH) {
@@ -311,7 +315,7 @@ readGeoJSON(path.join(__dirname, "tz_world.json"), function(err, polygons) {
         dist = t;
       }
 
-      return zones.hash[best ? best.tzid : TIMEZONE_INTERNATIONAL_LIST[Math.round((180.0 + lon) / 15.0)]] | 0xFE00;
+      return (0x10000 - zones.list.length) + zones.hash[best ? best.tzid : TIMEZONE_INTERNATIONAL_LIST[Math.round((180.0 + lon) / 15.0)]];
     }
 
     /* Look up the entire tile. */
@@ -343,24 +347,24 @@ readGeoJSON(path.join(__dirname, "tz_world.json"), function(err, polygons) {
      * if the only color is ocean, use that. Otherwise, I guess we have to
      * return the whole thing, oh well. */
     if(flat) {
-      t = 0xFFFF;
+      t = -1;
 
       for(i = data.length; i--; ) {
         if(data[i] === t)
           continue;
 
-        if(zones.list[data[i] & 0x01FF].slice(0, 3) === "Etc")
+        if(zones.list[data[i] - (0x10000 - zones.list.length)].slice(0, 3) === "Etc")
           continue;
 
-        if(t !== 0xFFFF)
+        if(t !== -1)
           break;
 
         t = data[i];
       }
 
       if(i === -1) {
-        if(t === 0xFFFF)
-          t = zones.hash[TIMEZONE_INTERNATIONAL_LIST[Math.round((180.0 + lon) / 15.0)]] | 0xFE00;
+        if(t === -1)
+          t = (0x10000 - zones.list.length) + zones.hash[TIMEZONE_INTERNATIONAL_LIST[Math.round((180.0 + lon) / 15.0)]];
 
         return t;
       }
@@ -370,5 +374,5 @@ readGeoJSON(path.join(__dirname, "tz_world.json"), function(err, polygons) {
   }
 
   console.warn("TIMEZONE_LIST = %j", zones.list);
-  write(tile(polygons, -90.0, -180.0, +90.0, +180.0, COARSE_WIDTH, COARSE_HEIGHT, 0));
+  write(tile(polygons, -90.0, -180.0, +90.0, +180.0, COARSE_WIDTH, COARSE_HEIGHT, 0), zones.list.length);
 });
