@@ -146,7 +146,7 @@ module.exports = function(lat, lon) {
   lat = +lat;
   lon = +lon;
   if(!(lat >= -90.0 && lat <= +90.0 && lon >= -180.0 && lon <= +180.0))
-    throw new new RangeError("invalid coordinates");
+    throw new RangeError("invalid coordinates");
 
   /* The root node of the tree is wider than a normal node, acting essentially
    * as a "flattened" few layers of the tree. This saves a bit of overhead,
