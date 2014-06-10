@@ -23,7 +23,9 @@ describe("tz-lookup", function() {
         tz(lat, lon)
       } catch (ex) {
         expect(ex.message).to.equal("invalid coordinates");
+        return;
       }
+      throw "Should not get here."
     });
   }
 
@@ -55,12 +57,12 @@ describe("tz-lookup", function() {
   test( "21.4381", "-158.0493",         "Pacific/Honolulu");
 
   /* These tests handle bad input. */
-  errorTest( 100, 10, "hello");
-  errorTest( 10, 190, "hello");
-  errorTest( "hello", 10, "hello");
-  errorTest( 10, "hello", "hello");
-  errorTest( undefined, undefined, "hello");
-  errorTest( {lat: 10, lon: 10}, null, "hello");
+  errorTest( 100, 10 );
+  errorTest( 10, 190 );
+  errorTest( "hello", 10 );
+  errorTest( 10, "hello" );
+  errorTest( undefined, undefined );
+  errorTest( {lat: 10, lon: 10}, null );
 
   /* These are automatically-generated fuzz-tests from v1. */
   fuzz( 74.1570,  171.0540, "Etc/GMT-11");
