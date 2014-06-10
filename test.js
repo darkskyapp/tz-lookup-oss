@@ -17,6 +17,16 @@ describe("tz-lookup", function() {
     });
   }
 
+  function errorTest(lat, lon) {
+    it("should throw an error given " + lat + ", " + lon, function() {
+      try {
+        tz(lat, lon)
+      } catch (ex) {
+        expect(ex.message).to.equal("invalid coordinates");
+      }
+    });
+  }
+
   /* These tests are hand-crafted. */
   test( 40.7092,  -74.0151,             "America/New_York");
   test( 42.3668,  -71.0546,             "America/New_York");
@@ -39,6 +49,18 @@ describe("tz-lookup", function() {
   test(-16.4965,  -68.1702,               "America/La_Paz");
   test(-31.9369,  115.8453,              "Australia/Perth");
   test( 42.0000,  -87.5000,              "America/Chicago");
+
+  /* Can handle string input as well as numerical input */
+  test( "42.3668",  "-71.0546",         "America/New_York");
+  test( "21.4381", "-158.0493",         "Pacific/Honolulu");
+
+  /* These tests handle bad input. */
+  errorTest( 100, 10, "hello");
+  errorTest( 10, 190, "hello");
+  errorTest( "hello", 10, "hello");
+  errorTest( 10, "hello", "hello");
+  errorTest( undefined, undefined, "hello");
+  errorTest( {lat: 10, lon: 10}, null, "hello");
 
   /* These are automatically-generated fuzz-tests from v1. */
   fuzz( 74.1570,  171.0540, "Etc/GMT-11");
