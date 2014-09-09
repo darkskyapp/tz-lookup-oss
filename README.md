@@ -52,3 +52,10 @@ last updated on 26 Nov 2013.
 
 [1]: https://forecast.io/
 [2]: http://efele.net/maps/tz/
+
+License
+-------
+
+[CCO][3]. Please use this work however you like.
+
+[3]: http://creativecommons.org/publicdomain/zero/1.0/
