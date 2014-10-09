@@ -56,6 +56,7 @@ last updated on 26 Nov 2013.
 License
 -------
 
-[CCO][3]. Please use this work however you like.
+To the extend possible by law, The Dark Sky Company, LLC has [waived all
+copyright and related or neighboring rights][cc0] to this library.
 
-[3]: http://creativecommons.org/publicdomain/zero/1.0/
+[cc0]: http://creativecommons.org/publicdomain/zero/1.0/
