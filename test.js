@@ -4,7 +4,7 @@ var expect = require("chai").expect,
 describe("tz-lookup", function() {
   function test(lat, lon, tzid) {
     it("should return \"" + tzid + "\" given " + lat + ", " + lon, function() {
-      expect(tz(lat, lon)).to.equal(tzid);
+      expect(tz(lat, lon).id).to.equal(tzid);
     });
   }
 
@@ -12,8 +12,8 @@ describe("tz-lookup", function() {
     it("should return \"" + tzid + "\" (or something more specific) given " + lat + ", " + lon, function() {
       var timezone = tz(lat, lon);
 
-      if(tzid.slice(0, 3) !== "Etc" || timezone.slice(0, 3) === "Etc")
-        expect(timezone).to.equal(tzid);
+      if(tzid.slice(0, 3) !== "Etc" || timezone.id.slice(0, 3) === "Etc")
+        expect(timezone.id).to.equal(tzid);
     });
   }
 

@@ -17,7 +17,15 @@ To use:
 
     > var tz = require("tz-lookup");
     > console.log(tz(42.7235, -73.6931));
-    "America/New_York"
+
+    { 
+      id: 'America/New_York',
+      name: 'Eastern Standard Time',
+    }
+    
+    
+    > console.log(tz.list());
+    [ { id, name }, { id, name } ]
 
 **Please take note of the following:**
 
