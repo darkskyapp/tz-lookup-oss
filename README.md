@@ -48,7 +48,7 @@ Timezone data is from Eric Muller's excellent [TZ timezone maps][2]. To
 regenerate the compressed database, simply download his `tz_world` shapefile,
 convert it to a GeoJSON using GDAL, put it in the project directory (with the
 name `tz_world.json`), and run `json2bin >tz.bin`. The timezone database was
-last updated on 26 Nov 2013.
+last updated on 7 Nov 2015.
 
 [1]: https://forecast.io/
 [2]: http://efele.net/maps/tz/

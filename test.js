@@ -131,7 +131,7 @@ describe("tz-lookup", function() {
   fuzz(-78.4514,  -46.9126, "Etc/GMT+3");
   fuzz(  4.8627, -154.9894, "Etc/GMT+10");
   fuzz(-20.3063,  -36.6612, "Etc/GMT+2");
-  fuzz( 64.9576,  144.3597, "Asia/Magadan");
+  fuzz( 64.9576,  144.3597, "Asia/Srednekolymsk");
   fuzz( 65.7747,   -4.2121, "Etc/GMT");
   fuzz(  4.4840, -163.9921, "Etc/GMT+11");
   fuzz( 82.9728,   -1.6901, "Etc/GMT");
@@ -204,7 +204,7 @@ describe("tz-lookup", function() {
   fuzz(-31.3366,  -57.4872, "America/Montevideo");
   fuzz(-65.9989, -108.7203, "Etc/GMT+7");
   fuzz(-29.7380,    4.2692, "Etc/GMT");
-  fuzz( 67.7696,  158.2245, "Asia/Magadan");
+  fuzz( 67.7696,  158.2245, "Asia/Srednekolymsk");
   fuzz(-13.0738, -174.7293, "Etc/GMT+12");
   fuzz( 83.3732,   -1.8287, "Etc/GMT");
   fuzz(-16.3976, -144.6824, "Etc/GMT+10");
@@ -466,7 +466,7 @@ describe("tz-lookup", function() {
   fuzz(-20.6653,  -39.4808, "Etc/GMT+3");
   fuzz(-51.8293,    4.4265, "Etc/GMT");
   fuzz(-58.7594,  164.8482, "Etc/GMT-11");
-  fuzz( 66.7761,  148.5291, "Asia/Magadan");
+  fuzz( 66.7761,  148.5291, "Asia/Srednekolymsk");
   fuzz( 82.6942, -178.8467, "Etc/GMT+12");
   fuzz( 29.1745,  162.7696, "Etc/GMT-11");
   fuzz(-39.2928,    5.1189, "Etc/GMT");
@@ -1528,7 +1528,7 @@ describe("tz-lookup", function() {
   fuzz(-71.0475,  -79.0481, "Etc/GMT+5");
   fuzz(-35.1480,   41.1389, "Etc/GMT-3");
   fuzz(-50.8557,   91.7244, "Etc/GMT-6");
-  fuzz( 56.6240,  116.2860, "Asia/Yakutsk");
+  fuzz( 56.6240,  116.2860, "Asia/Chita");
   fuzz(-68.6024,  164.6458, "Etc/GMT-11");
   fuzz( 82.4580,   88.9539, "Etc/GMT-6");
   fuzz(-80.3412, -114.9623, "Etc/GMT+8");
@@ -1554,7 +1554,7 @@ describe("tz-lookup", function() {
   fuzz( 51.1884,   72.5447, "Asia/Almaty");
   fuzz(-36.8834,  168.3115, "Etc/GMT-11");
   fuzz(-34.7990,   24.0946, "Etc/GMT-2");
-  fuzz( 50.1720,  109.3305, "Asia/Yakutsk");
+  fuzz( 50.1720,  109.3305, "Asia/Chita");
   fuzz( 31.6023,  -81.5271, "America/New_York");
   fuzz( -1.2999,  160.0939, "Etc/GMT-11");
   fuzz( 74.5168,  -78.7525, "Etc/GMT+5");
@@ -1597,7 +1597,7 @@ describe("tz-lookup", function() {
   fuzz( 11.9140,   -1.7697, "Africa/Ouagadougou");
   fuzz( 81.0019,   -3.2641, "Etc/GMT");
   fuzz( 25.2369,  115.3962, "Asia/Shanghai");
-  fuzz( 68.4210,  152.2690, "Asia/Magadan");
+  fuzz( 68.4210,  152.2690, "Asia/Srednekolymsk");
   fuzz(-68.9224,  -21.6616, "Etc/GMT+1");
   fuzz(  9.1427, -161.9418, "Etc/GMT+11");
   fuzz(-61.9484,    7.7619, "Etc/GMT-1");
@@ -1770,7 +1770,7 @@ describe("tz-lookup", function() {
   fuzz( 73.8546, -120.2774, "America/Yellowknife");
   fuzz(-41.1019, -122.1984, "Etc/GMT+8");
   fuzz(  8.4464, -130.2469, "Etc/GMT+9");
-  fuzz( 69.4978,  156.2309, "Asia/Magadan");
+  fuzz( 69.4978,  156.2309, "Asia/Srednekolymsk");
   fuzz( 23.2705,   87.0558, "Asia/Kolkata");
   fuzz(  4.0967,   48.8779, "Etc/GMT-3");
   fuzz(  8.1832,  -30.3321, "Etc/GMT+2");
@@ -1867,7 +1867,7 @@ describe("tz-lookup", function() {
   fuzz( 34.7523,  -31.5938, "Etc/GMT+2");
   fuzz(-84.7455,  -69.7055, "Etc/GMT+5");
   fuzz( 73.3086,  -50.3401, "America/Godthab");
-  fuzz( 66.0904,  141.2401, "Asia/Magadan");
+  fuzz( 66.0904,  141.2401, "Asia/Srednekolymsk");
   fuzz(-58.0650,   25.3396, "Etc/GMT-2");
   fuzz( 17.4341,  -30.0017, "Etc/GMT+2");
   fuzz(-67.3933, -164.0029, "Etc/GMT+11");
@@ -1907,7 +1907,7 @@ describe("tz-lookup", function() {
   fuzz( 83.5015, -113.9396, "Etc/GMT+8");
   fuzz(-72.3536,  -37.8608, "Etc/GMT+3");
   fuzz( 43.4929,   78.0778, "Asia/Almaty");
-  fuzz( 58.7754, -120.0701, "America/Vancouver");
+  fuzz( 58.7754, -120.0701, "America/Fort_Nelson");
   fuzz(-83.3062,   29.2595, "Etc/GMT-2");
   fuzz(  8.0682, -144.6451, "Etc/GMT+10");
   fuzz(-55.2859,    5.3289, "Etc/GMT");
