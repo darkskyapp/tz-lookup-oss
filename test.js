@@ -399,7 +399,7 @@ describe("tz-lookup", function() {
   fuzz(-48.5466,   59.1880, "Etc/GMT-4");
   fuzz( 19.0721,   -0.7923, "Africa/Bamako");
   fuzz( 44.3833,  -16.1446, "Etc/GMT+1");
-  fuzz( 51.7151,   84.7338, "Asia/Omsk");
+  fuzz( 51.7151,   84.7338, "Asia/Barnaul");
   fuzz(-25.4613,   62.8885, "Etc/GMT-4");
   fuzz(-58.6114,   20.1701, "Etc/GMT-1");
   fuzz( 39.8809,  -30.7253, "Etc/GMT+2");

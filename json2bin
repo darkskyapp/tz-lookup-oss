@@ -266,6 +266,15 @@ readGeoJSON(path.join(__dirname, "tz_world.json"), function(err, polygons) {
   if(err)
     throw err;
 
+  /* HACK: There is no such thing as America/Monterey! Change it to the correct
+   * IANA timezone. */
+  var i;
+  for(i = polygons.length; i--; ) {
+    if(polygons[i].tzid === "America/Monterey") {
+      polygons[i].tzid = "America/Monterrey";
+    }
+  }
+
   var zones = tzindex(polygons);
 
   function tile(polygons, min_lat, min_lon, max_lat, max_lon, width, height, depth) {

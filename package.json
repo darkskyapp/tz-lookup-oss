@@ -1,6 +1,6 @@
 {
   "name": "tz-lookup",
-  "version": "6.0.2",
+  "version": "6.0.3",
   "description": "fast time zone lookup",
   "keywords": [
     "tz",
@@ -16,7 +16,7 @@
     "url": "git://github.com/darkskyapp/tz-lookup.git"
   },
   "devDependencies": {
-    "chai": "1.9.x",
-    "mocha": "1.17.x"
+    "chai": "*",
+    "mocha": "*"
   }
 }
