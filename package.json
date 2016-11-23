@@ -1,6 +1,6 @@
 {
   "name": "tz-lookup",
-  "version": "6.0.3",
+  "version": "6.0.4",
   "description": "fast time zone lookup",
   "keywords": [
     "tz",
@@ -9,7 +9,7 @@
   ],
   "author": {
     "name": "The Dark Sky Company",
-    "email": "devsupport@darkskyapp.com"
+    "email": "developer@darksky.net"
   },
   "repository": {
     "type": "git",
@@ -18,5 +18,8 @@
   "devDependencies": {
     "chai": "*",
     "mocha": "*"
+  },
+  "scripts": {
+    "test": "mocha"
   }
 }

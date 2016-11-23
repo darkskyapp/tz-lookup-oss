@@ -1871,7 +1871,7 @@ describe("tz-lookup", function() {
   fuzz(-58.0650,   25.3396, "Etc/GMT-2");
   fuzz( 17.4341,  -30.0017, "Etc/GMT+2");
   fuzz(-67.3933, -164.0029, "Etc/GMT+11");
-  fuzz( 57.5957,   83.7790, "Asia/Novosibirsk");
+  fuzz( 57.5957,   83.7790, "Asia/Tomsk");
   fuzz( 62.4294, -160.5397, "America/Anchorage");
   fuzz( 15.6637, -100.0240, "Etc/GMT+7");
   fuzz(-63.6131,   49.2252, "Etc/GMT-3");

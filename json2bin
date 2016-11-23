@@ -157,39 +157,25 @@ Polygon.prototype = {
 };
 
 function readGeoJSON(pathname, callback) {
-  fs.readFile(pathname, "ascii", function(err, data) {
-    var i;
+  var i, data;
 
-    if(err) {
-      callback(err, null);
-      return;
+  data = JSON.parse(fs.readFileSync(pathname, "ascii")).features;
+
+  for(i = data.length; i--; ) {
+    if(!data[i].properties ||
+       !data[i].properties.TZID ||
+       data[i].properties.TZID === "uninhabited") {
+      data.splice(i, 1);
     }
 
-    try {
-      data = JSON.parse(data.toString("ascii"));
+    else {
+      data[i] = new Polygon(data[i]);
     }
+  }
 
-    catch(err) {
-      callback(err, null);
-      return;
-    }
+  data.sort((a, b) => a.area - b.area);
 
-    data = data.features;
-    for(i = data.length; i--; )
-      if(!data[i].properties ||
-         !data[i].properties.TZID ||
-         data[i].properties.TZID === "uninhabited")
-        data.splice(i, 1);
-
-      else
-        data[i] = new Polygon(data[i]);
-
-    data.sort(function(a, b) {
-      return a.area - b.area;
-    });
-
-    callback(null, data);
-  });
+  return data;
 }
 
 function tzindex(polygons) {
@@ -233,7 +219,7 @@ function write(root, nzones) {
         queue.push(node.data[i]);
   }
 
-  fs.writeFileSync("moop.json", JSON.stringify(root));
+  //fs.writeFileSync("moop.json", JSON.stringify(root));
   console.warn("TILE_COUNT = %d, BYTE_LENGTH = %d", nodes.length, len);
   data = new Buffer(len);
   
@@ -259,129 +245,126 @@ function write(root, nzones) {
     off += (node.width * node.height) << 1;
   }
 
-  process.stdout.write(data);
+  fs.writeFileSync("tz.bin", data);
 }
 
-readGeoJSON(path.join(__dirname, "tz_world.json"), function(err, polygons) {
-  if(err)
-    throw err;
+var polygons = readGeoJSON(path.join(__dirname, "tz_world.json"));
 
-  /* HACK: There is no such thing as America/Monterey! Change it to the correct
-   * IANA timezone. */
-  var i;
-  for(i = polygons.length; i--; ) {
-    if(polygons[i].tzid === "America/Monterey") {
-      polygons[i].tzid = "America/Monterrey";
+/* HACK: There is no such thing as America/Monterey! Change it to the correct
+ * IANA timezone. */
+var i;
+for(i = polygons.length; i--; ) {
+  if(polygons[i].tzid === "America/Monterey") {
+    polygons[i].tzid = "America/Monterrey";
+  }
+}
+
+var zones = tzindex(polygons);
+
+function tile(polygons, min_lat, min_lon, max_lat, max_lon, width, height, depth) {
+  var box = [
+        min_lon - MAX_DISTANCE_SQ,
+        min_lat - MAX_DISTANCE_SQ,
+        max_lon + MAX_DISTANCE_SQ,
+        max_lat + MAX_DISTANCE_SQ
+      ],
+      lat = (min_lat + max_lat) * 0.5,
+      lon = (min_lon + max_lon) * 0.5,
+      list = [],
+      i, data, x, y, best, dist, t, flat, dlat, dlon;
+
+  for(i = polygons.length; i--; )
+    if(polygons[i].overlap(box))
+      list.push(polygons[i]);
+
+  /* No polygons cover the area? Well then, just exit early. */
+  if(list.length === 0)
+    return (0x10000 - zones.list.length) + zones.hash[TIMEZONE_INTERNATIONAL_LIST[Math.round((180.0 + lon) / 15.0)]];
+
+  /* Only one does? Then use it. (This isn't actually accurate, but our
+   * compression is actually lossy. Furthermore, this just means that some
+   * places will be considered land instead of ocean, which is actually
+   * helpful for our use-case.) */
+  if(list.length === 1)
+    return (0x10000 - zones.list.length) + zones.hash[list[0].tzid];
+
+  /* If we don't want to recurse any more, just return a single pixel. */
+  if(depth === MAX_DEPTH) {
+    best = null;
+    dist = MAX_DISTANCE_SQ;
+    for(i = list.length; i--; ) {
+      box[0] = lon - dist;
+      box[1] = lat - dist;
+      box[2] = lon + dist;
+      box[3] = lat + dist;
+      if(!list[i].overlap(box))
+        continue;
+
+      t = list[i].distance(lat, lon);
+      if(t >= dist)
+        continue;
+
+      best = list[i];
+      dist = t;
+    }
+
+    return (0x10000 - zones.list.length) + zones.hash[best ? best.tzid : TIMEZONE_INTERNATIONAL_LIST[Math.round((180.0 + lon) / 15.0)]];
+  }
+
+  /* Look up the entire tile. */
+  data = new Array(width * height);
+  flat = true;
+  dlat = (max_lat - min_lat) / height;
+  dlon = (max_lon - min_lon) / width;
+  for(y = height; y--; ) {
+    for(x = width; x--; ) {
+      t = tile(
+        list,
+        min_lat + (height - (y + 1)) * dlat,
+        min_lon + (x + 0) * dlon,
+        min_lat + (height - (y + 0)) * dlat,
+        min_lon + (x + 1) * dlon,
+        FINE_WIDTH,
+        FINE_HEIGHT,
+        depth + 1
+      );
+
+      data[y * width + x] = t;
+
+      if(typeof t !== "number")
+        flat = false;
     }
   }
 
-  var zones = tzindex(polygons);
+  /* Check to see if there's only one non-ocean color. If so, use it. If not,
+   * if the only color is ocean, use that. Otherwise, I guess we have to
+   * return the whole thing, oh well. */
+  if(flat) {
+    t = -1;
 
-  function tile(polygons, min_lat, min_lon, max_lat, max_lon, width, height, depth) {
-    var box = [
-          min_lon - MAX_DISTANCE_SQ,
-          min_lat - MAX_DISTANCE_SQ,
-          max_lon + MAX_DISTANCE_SQ,
-          max_lat + MAX_DISTANCE_SQ
-        ],
-        lat = (min_lat + max_lat) * 0.5,
-        lon = (min_lon + max_lon) * 0.5,
-        list = [],
-        i, data, x, y, best, dist, t, flat, dlat, dlon;
+    for(i = data.length; i--; ) {
+      if(data[i] === t)
+        continue;
 
-    for(i = polygons.length; i--; )
-      if(polygons[i].overlap(box))
-        list.push(polygons[i]);
+      if(zones.list[data[i] - (0x10000 - zones.list.length)].slice(0, 3) === "Etc")
+        continue;
 
-    /* No polygons cover the area? Well then, just exit early. */
-    if(list.length === 0)
-      return (0x10000 - zones.list.length) + zones.hash[TIMEZONE_INTERNATIONAL_LIST[Math.round((180.0 + lon) / 15.0)]];
+      if(t !== -1)
+        break;
 
-    /* Only one does? Then use it. (This isn't actually accurate, but our
-     * compression is actually lossy. Furthermore, this just means that some
-     * places will be considered land instead of ocean, which is actually
-     * helpful for our use-case.) */
-    if(list.length === 1)
-      return (0x10000 - zones.list.length) + zones.hash[list[0].tzid];
-
-    /* If we don't want to recurse any more, just return a single pixel. */
-    if(depth === MAX_DEPTH) {
-      best = null;
-      dist = MAX_DISTANCE_SQ;
-      for(i = list.length; i--; ) {
-        box[0] = lon - dist;
-        box[1] = lat - dist;
-        box[2] = lon + dist;
-        box[3] = lat + dist;
-        if(!list[i].overlap(box))
-          continue;
-
-        t = list[i].distance(lat, lon);
-        if(t >= dist)
-          continue;
-
-        best = list[i];
-        dist = t;
-      }
-
-      return (0x10000 - zones.list.length) + zones.hash[best ? best.tzid : TIMEZONE_INTERNATIONAL_LIST[Math.round((180.0 + lon) / 15.0)]];
+      t = data[i];
     }
 
-    /* Look up the entire tile. */
-    data = new Array(width * height);
-    flat = true;
-    dlat = (max_lat - min_lat) / height;
-    dlon = (max_lon - min_lon) / width;
-    for(y = height; y--; ) {
-      for(x = width; x--; ) {
-        t = tile(
-          list,
-          min_lat + (height - (y + 1)) * dlat,
-          min_lon + (x + 0) * dlon,
-          min_lat + (height - (y + 0)) * dlat,
-          min_lon + (x + 1) * dlon,
-          FINE_WIDTH,
-          FINE_HEIGHT,
-          depth + 1
-        );
+    if(i === -1) {
+      if(t === -1)
+        t = (0x10000 - zones.list.length) + zones.hash[TIMEZONE_INTERNATIONAL_LIST[Math.round((180.0 + lon) / 15.0)]];
 
-        data[y * width + x] = t;
-
-        if(typeof t !== "number")
-          flat = false;
-      }
+      return t;
     }
-
-    /* Check to see if there's only one non-ocean color. If so, use it. If not,
-     * if the only color is ocean, use that. Otherwise, I guess we have to
-     * return the whole thing, oh well. */
-    if(flat) {
-      t = -1;
-
-      for(i = data.length; i--; ) {
-        if(data[i] === t)
-          continue;
-
-        if(zones.list[data[i] - (0x10000 - zones.list.length)].slice(0, 3) === "Etc")
-          continue;
-
-        if(t !== -1)
-          break;
-
-        t = data[i];
-      }
-
-      if(i === -1) {
-        if(t === -1)
-          t = (0x10000 - zones.list.length) + zones.hash[TIMEZONE_INTERNATIONAL_LIST[Math.round((180.0 + lon) / 15.0)]];
-
-        return t;
-      }
-    }
-
-    return {id: -1, width: width, height: height, data: data};
   }
 
-  console.warn("TIMEZONE_LIST = %j", zones.list);
-  write(tile(polygons, -90.0, -180.0, +90.0, +180.0, COARSE_WIDTH, COARSE_HEIGHT, 0), zones.list.length);
-});
+  return {id: -1, width: width, height: height, data: data};
+}
+
+fs.writeFileSync("tz.json", JSON.stringify(zones.list));
+write(tile(polygons, -90.0, -180.0, +90.0, +180.0, COARSE_WIDTH, COARSE_HEIGHT, 0), zones.list.length);
