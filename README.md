@@ -34,7 +34,7 @@ To use:
     several very small timezones (such as Europe/Vatican) and favors country
     timezones over GMT offsets (and so may exaggerate the distance of
     territorial waters). However, the level of accuracy should be adequate for
-    most purposes. (For example, this module is used by the [Forecast API][1]
+    most purposes. (For example, this module is used by the [Dark Sky API][1]
     for global timezone lookups.)
 
 If you find a real-world case where this module's accuracy is inadequate,
@@ -45,12 +45,10 @@ Sources
 -------
 
 Timezone data is from Eric Muller's excellent [TZ timezone maps][2]. To
-regenerate the compressed database, simply download his `tz_world` shapefile,
-convert it to a GeoJSON using GDAL, put it in the project directory (with the
-name `tz_world.json`), and run `json2bin >tz.bin`. The timezone database was
-last updated on 7 Nov 2015.
+regenerate the compressed database, simply run `rebuild.sh`. The timezone
+database was last updated on 28 May 2016.
 
-[1]: https://forecast.io/
+[1]: https://darksky.net/dev/
 [2]: http://efele.net/maps/tz/
 
 License
