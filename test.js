@@ -1,3 +1,4 @@
+"use strict";
 var expect = require("chai").expect,
     tz     = require("./");
 
@@ -213,7 +214,7 @@ describe("tz-lookup", function() {
   fuzz(-71.8503,  -86.6314, "Etc/GMT+6");
   fuzz( 18.7113,  173.7809, "Etc/GMT-12");
   fuzz(-30.2745,  127.9174, "Australia/Perth");
-  fuzz( -9.6156,   34.1749, "Africa/Blantyre");
+  fuzz( -9.6156,   34.1749, "Africa/Dar_es_Salaam");
   fuzz(-88.9531, -138.8994, "Etc/GMT+9");
   fuzz( 64.4928, -101.4695, "America/Rankin_Inlet");
   fuzz(-13.6290,   59.2620, "Etc/GMT-4");
