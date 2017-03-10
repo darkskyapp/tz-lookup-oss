@@ -1,27 +1,28 @@
 "use strict";
-const width = 24576;
-const height = 12288;
+const width = 49152;
+const height = 24576;
 const fs = require("fs");
-const tz_data = fs.readFileSync("tz_world.pgm").slice(21);
-const urban_data = fs.readFileSync("ne_10m_urban_areas.pgm").slice(19);
 const index = require("./tz_world_index");
 
-// get the raw pixel data at x,y
-function tz_pixel(x, y) {
-  return tz_data.readUInt16BE((y * width + x) * 2);
+function read(pathname, offset, buffer) {
+  const fd = fs.openSync(pathname, "r");
+  const n = fs.readSync(fd, buffer, 0, buffer.length, offset);
+  if(n !== buffer.length) {
+    throw new Error("unable to read " + buffer.length + " bytes from " + pathname);
+  }
+  fs.closeSync(fd);
 }
 
-function urban_pixel(x, y) {
-  return urban_data[y * width + x];
-}
+function fine(urban_data, urban_x, urban_y, tz_data, tz_x, tz_y, size) {
+  const tz_width = width / 4;
+  const tz_height = height / 4;
 
-function fine(x, y, size) {
   /* Generate a histogram of the relative frequency of timezones in the tile. */
   const map = new Map();
   let count = 0;
   for(let v = 0; v < size; v++) {
     for(let u = 0; u < size; u++) {
-      const key = tz_pixel(x + u, y + v) - 1;
+      const key = tz_data.readUInt16BE(((tz_y + v) * tz_width + (tz_x + u)) * 2) - 1;
       if(key === -1) {
         continue;
       }
@@ -36,7 +37,7 @@ function fine(x, y, size) {
   /* No explicit timezones means use international timezones. (These are the
    * last 25 in the index.) */
   if(map.size === 0) {
-    return index.length + Math.round((x + size / 2) * 24 / width) - 25;
+    return index.length + Math.round((urban_x + size / 2) * 24 / width) - 25;
   }
 
   /* Only one timezone means, let's use it. (Note that this also handles the
@@ -52,7 +53,8 @@ function fine(x, y, size) {
   let important = false;
   for(let v = 0; v < size; v++) {
     for(let u = 0; u < size; u++) {
-      if(urban_pixel(x + u, y + v) !== 0) {
+      const i = (urban_y + v) * width + (urban_x + u);
+      if(((urban_data[i >> 3] >> (i & 7)) & 1) === 0) {
         important = true;
         break;
       }
@@ -69,22 +71,38 @@ function fine(x, y, size) {
   /* Otherwise, recurse down. */
   const half = size / 2;
   return [
-    fine(x, y, half),
-    fine(x + half, y, half),
-    fine(x, y + half, half),
-    fine(x + half, y + half, half)
+    fine(urban_data, urban_x, urban_y, tz_data, tz_x, tz_y, half),
+    fine(urban_data, urban_x + half, urban_y, tz_data, tz_x + half, tz_y, half),
+    fine(urban_data, urban_x, urban_y + half, tz_data, tz_x, tz_y + half, half),
+    fine(urban_data, urban_x + half, urban_y + half, tz_data, tz_x + half, tz_y + half, half),
   ];
 }
 
 function coarse() {
-  const a = new Array(48 * 24);
+  const root = new Array(48 * 24);
   const size = width / 48;
-  for(let y = 0; y < 24; y++) {
-    for(let x = 0; x < 48; x++) {
-      a[y * 48 + x] = fine(x * size, y * size, size);
+
+  const urban_data = Buffer.allocUnsafe(width * height / 8);
+  read("ne_10m_urban_areas.pbm", 15, urban_data);
+
+  const tz_data = Buffer.allocUnsafe((width / 4) * (height / 2) * 2);
+  for(let y = 0; y < 2; y++) {
+    for(let x = 0; x < 4; x++) {
+      read("tz_world_" + (y * 4 + x + 10).toString(36) + ".pgm", 21, tz_data);
+
+      for(let v = 0; v < 12; v++) {
+        for(let u = 0; u < 12; u++) {
+          root[(y * 12 + v) * 48 + (x * 12 + u)] = fine(
+            urban_data, (x * 12 + u) * size, (y * 12 + v) * size,
+            tz_data, u * size, v * size,
+            size
+          );
+        }
+      }
     }
   }
-  return a;
+
+  return root;
 }
 
 function pack(root) {
@@ -92,6 +110,7 @@ function pack(root) {
 
   for(const queue = [root]; queue.length; ) {
     const node = queue.shift();
+
     node.index = list.length;
     list.push(node);
 
@@ -109,7 +128,9 @@ function pack(root) {
     for(let j = 0; j < a.length; j++) {
       const b = a[j];
       buffer.writeUIntBE(
-        Array.isArray(b)? (b.index - a.index - 1): 65536 - index.length + b,
+        Array.isArray(b)?
+          (b.index - a.index - 1):
+          65536 - index.length + b,
         off,
         2
       );
