@@ -2,30 +2,71 @@
 const width = 24576;
 const height = 12288;
 const fs = require("fs");
-const data = fs.readFileSync("tz_world.pgm").slice(21);
+const tz_data = fs.readFileSync("tz_world.pgm").slice(21);
+const urban_data = fs.readFileSync("ne_10m_urban_areas.pgm").slice(19);
 const index = require("./tz_world_index");
 
 // get the raw pixel data at x,y
-function getpixel(x, y) {
-  return data.readUInt16BE((y * width + x) * 2);
+function tz_pixel(x, y) {
+  return tz_data.readUInt16BE((y * width + x) * 2);
+}
+
+function urban_pixel(x, y) {
+  return urban_data[y * width + x];
 }
 
 function fine(x, y, size) {
-  const set = new Set();
+  /* Generate a histogram of the relative frequency of timezones in the tile. */
+  const map = new Map();
+  let count = 0;
   for(let v = 0; v < size; v++) {
     for(let u = 0; u < size; u++) {
-      set.add(getpixel(x + u, y + v) - 1);
+      const key = tz_pixel(x + u, y + v) - 1;
+      if(key === -1) {
+        continue;
+      }
+      if(!map.has(key)) {
+        map.set(key, 0);
+      }
+      map.set(key, map.get(key) + 1);
+      ++count;
     }
   }
-  set.delete(-1);
 
-  if(set.size === 0) {
+  /* No explicit timezones means use international timezones. (These are the
+   * last 25 in the index.) */
+  if(map.size === 0) {
     return index.length + Math.round((x + size / 2) * 24 / width) - 25;
   }
-  if(set.size === 1) {
-    return Array.from(set)[0];
+
+  /* Only one timezone means, let's use it. (Note that this also handles the
+   * "we recursed all the way down to a single pixel" case, so there's no need
+   * for explicitly handling that case.) */
+  if(map.size === 1) {
+    return Array.from(map.keys())[0];
   }
 
+  /* Check and see if this tile has any urban centers. If not, it's probably
+   * not worth recursing on, so early out with the most common timezone in the
+   * tile if it covers a majority of it. */
+  let important = false;
+  for(let v = 0; v < size; v++) {
+    for(let u = 0; u < size; u++) {
+      if(urban_pixel(x + u, y + v) !== 0) {
+        important = true;
+        break;
+      }
+    }
+  }
+  if(!important) {
+    const array = Array.from(map).sort((a, b) => b[1] - a[1]);
+
+    if(array[0][1] * 2 >= count) {
+      return array[0][0];
+    }
+  }
+
+  /* Otherwise, recurse down. */
   const half = size / 2;
   return [
     fine(x, y, half),
@@ -48,45 +89,22 @@ function coarse() {
 
 function pack(root) {
   const list = [];
-  const queue = [];
 
-  root.index = 0;
-  list.push(root);
+  for(const queue = [root]; queue.length; ) {
+    const node = queue.shift();
+    node.index = list.length;
+    list.push(node);
 
-  for(let i = 0; i < root.length; i++) {
-    let node = root[i];
-    if(Array.isArray(node)) {
-      queue.push(node);
-
-      while(queue.length) {
-        node = queue.shift();
-        node.index = list.length;
-        list.push(node);
-        for(let i = 0; i < node.length; i++) {
-          if(Array.isArray(node[i])) {
-            queue.push(node[i]);
-          }
-        }
+    for(let i = 0; i < node.length; i++) {
+      if(Array.isArray(node[i])) {
+        queue.push(node[i]);
       }
     }
   }
 
-  const buffer =
-    Buffer.allocUnsafe(1 * 48 * 24 * 3 + (list.length - 1) * 2 * 2 * 2);
+  const buffer = Buffer.allocUnsafe((48 * 24 + (list.length - 1) * 2 * 2) * 2);
   let off = 0;
-  {
-    const a = list[0];
-    for(let j = 0; j < a.length; j++) {
-      const b = a[j];
-      buffer.writeUIntBE(
-        Array.isArray(b)? (b.index - a.index - 1): 16777216 - index.length + b,
-        off,
-        3
-      );
-      off += 3;
-    }
-  }
-  for(let i = 1; i < list.length; i++) {
+  for(let i = 0; i < list.length; i++) {
     const a = list[i];
     for(let j = 0; j < a.length; j++) {
       const b = a[j];
