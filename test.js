@@ -52,6 +52,7 @@ describe("tz-lookup", function() {
   test(-16.4965,  -68.1702,               "America/La_Paz");
   test(-31.9369,  115.8453,              "Australia/Perth");
   test( 42.0000,  -87.5000,              "America/Chicago");
+  test( 36.9147, -111.4558,              "America/Phoenix");
 
   /* Can handle string input as well as numerical input */
   test( "42.3668",  "-71.0546",         "America/New_York");

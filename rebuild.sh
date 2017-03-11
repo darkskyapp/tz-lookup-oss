@@ -2,7 +2,7 @@
 set -e
 
 # get data
-curl -L -O http://efele.net/maps/tz/world/tz_world_mp.zip -O http://www.naturalearthdata.com/http//www.naturalearthdata.com/download/10m/cultural/ne_10m_urban_areas.zip
+curl -L -O http://efele.net/maps/tz/world/tz_world_mp.zip -O http://www.naturalearthdata.com/http//www.naturalearthdata.com/download/10m/cultural/ne_10m_urban_areas.zip -O http://www.naturalearthdata.com/http//www.naturalearthdata.com/download/10m/cultural/ne_10m_populated_places_simple.zip
 
 # unpack tz_world_mp into a useable format. (we do this into a few tiles
 # because otherwise they're too big for Node to manage :( )
@@ -34,6 +34,11 @@ gdal_rasterize -burn 255 -te -180 -90 180 90 -ts 49152 24576 -ot Byte ne_10m_urb
 convert ne_10m_urban_areas.tiff ne_10m_urban_areas.pbm
 rm -rf ne_10m_urban_areas.README.html ne_10m_urban_areas.VERSION.txt ne_10m_urban_areas.dbf ne_10m_urban_areas.shp ne_10m_urban_areas.shx ne_10m_urban_areas.prj ne_10m_urban_areas.tiff
 
+# and, for good measure, populated places
+unzip ne_10m_populated_places_simple.zip
+ogr2ogr -f GeoJSON ne_10m_populated_places_simple.json ne_10m_populated_places_simple.shp
+rm -rf ne_10m_populated_places_simple.README.html ne_10m_populated_places_simple.VERSION.txt ne_10m_populated_places_simple.dbf ne_10m_populated_places_simple.prj ne_10m_populated_places_simple.shp ne_10m_populated_places_simple.shx ne_10m_populated_places_simple.zip
+
 # repack tz_world_mp and ne_10m_urban_areas into a compressed image
-#node pack
-#rm -rf tz_world.pgm ne_10m_urban_areas.pbm
+node pack
+rm -rf tz_world.pgm ne_10m_urban_areas.pbm ne_10m_populated_places_simple.json

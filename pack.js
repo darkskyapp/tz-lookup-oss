@@ -13,13 +13,34 @@ function read(pathname, offset, buffer) {
   fs.closeSync(fd);
 }
 
+function force(lat, lon, buffer) {
+  const x = (180 + lon) * width  / 360.00000000000006,
+        y = ( 90 - lat) * height / 180.00000000000003,
+        r = 2,
+        min_x = Math.max(Math.floor(x - r), 0),
+        min_y = Math.max(Math.floor(y - r), 0),
+        max_x = Math.min(Math.ceil (x + r), width  - 1),
+        max_y = Math.min(Math.ceil (y + r), height - 1);
+  for(let v = min_y; v <= max_y; v++) {
+    for(let u = min_x; u <= max_x; u++) {
+      const dx = u - x,
+            dy = v - y;
+      if(dx * dx + dy * dy > r * r) {
+        continue;
+      }
+
+      const i = v * width + u;
+      buffer[i >> 3] &= (~(1 << (i & 7))) & 255;
+    }
+  }
+}
+
 function fine(urban_data, urban_x, urban_y, tz_data, tz_x, tz_y, size) {
   const tz_width = width / 4;
   const tz_height = height / 4;
 
   /* Generate a histogram of the relative frequency of timezones in the tile. */
   const map = new Map();
-  let count = 0;
   for(let v = 0; v < size; v++) {
     for(let u = 0; u < size; u++) {
       const key = tz_data.readUInt16BE(((tz_y + v) * tz_width + (tz_x + u)) * 2) - 1;
@@ -30,7 +51,6 @@ function fine(urban_data, urban_x, urban_y, tz_data, tz_x, tz_y, size) {
         map.set(key, 0);
       }
       map.set(key, map.get(key) + 1);
-      ++count;
     }
   }
 
@@ -61,11 +81,7 @@ function fine(urban_data, urban_x, urban_y, tz_data, tz_x, tz_y, size) {
     }
   }
   if(!important) {
-    const array = Array.from(map).sort((a, b) => b[1] - a[1]);
-
-    if(array[0][1] * 2 >= count) {
-      return array[0][0];
-    }
+    return Array.from(map).sort((a, b) => b[1] - a[1])[0][0];
   }
 
   /* Otherwise, recurse down. */
@@ -84,6 +100,14 @@ function coarse() {
 
   const urban_data = Buffer.allocUnsafe(width * height / 8);
   read("ne_10m_urban_areas.pbm", 15, urban_data);
+
+  const cities = require("./ne_10m_populated_places_simple.json");
+  for(let feature of cities.features) {
+    const geometry = feature.geometry;
+    if(geometry && geometry.type === "Point") {
+      force(geometry.coordinates[1], geometry.coordinates[0], urban_data);
+    }
+  }
 
   const tz_data = Buffer.allocUnsafe((width / 4) * (height / 2) * 2);
   for(let y = 0; y < 2; y++) {
