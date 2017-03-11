@@ -13,16 +13,20 @@ function read(pathname, offset, buffer) {
   fs.closeSync(fd);
 }
 
-function force(lat, lon, buffer) {
+function constrain(x, min, max) {
+  return Math.min(Math.max(x, min), max);
+}
+
+function force_urban(lat, lon, buffer) {
   const x = (180 + lon) * width  / 360.00000000000006,
         y = ( 90 - lat) * height / 180.00000000000003,
         r = 2,
-        min_x = Math.max(Math.floor(x - r), 0),
-        min_y = Math.max(Math.floor(y - r), 0),
-        max_x = Math.min(Math.ceil (x + r), width  - 1),
-        max_y = Math.min(Math.ceil (y + r), height - 1);
-  for(let v = min_y; v <= max_y; v++) {
-    for(let u = min_x; u <= max_x; u++) {
+        min_x = constrain(Math.floor(x - r    ), 0, width ),
+        min_y = constrain(Math.floor(y - r    ), 0, height),
+        max_x = constrain(Math.floor(x + r + 1), 0, width ),
+        max_y = constrain(Math.floor(y + r + 1), 0, height);
+  for(let v = min_y; v < max_y; v++) {
+    for(let u = min_x; u < max_x; u++) {
       const dx = u - x,
             dy = v - y;
       if(dx * dx + dy * dy > r * r) {
@@ -98,16 +102,22 @@ function coarse() {
   const root = new Array(48 * 24);
   const size = width / 48;
 
+  /* Blanket urban coverage data from MODIS. */
   const urban_data = Buffer.allocUnsafe(width * height / 8);
   read("ne_10m_urban_areas.pbm", 15, urban_data);
 
+  /* Plus automatically block out cities. */
   const cities = require("./ne_10m_populated_places_simple.json");
   for(let feature of cities.features) {
     const geometry = feature.geometry;
     if(geometry && geometry.type === "Point") {
-      force(geometry.coordinates[1], geometry.coordinates[0], urban_data);
+      force_urban(geometry.coordinates[1], geometry.coordinates[0], urban_data);
     }
   }
+
+  /* Manually fix specific resolution problem locations. */
+  force_urban(36.8381, -84.8500, urban_data);
+  force_urban(37.9643, -86.7453, urban_data);
 
   const tz_data = Buffer.allocUnsafe((width / 4) * (height / 2) * 2);
   for(let y = 0; y < 2; y++) {
