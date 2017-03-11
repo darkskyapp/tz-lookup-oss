@@ -1,35 +1,35 @@
 "use strict";
-var expect = require("chai").expect,
-    tz     = require("./");
+const expect = require("chai").expect,
+      tz     = require("./");
 
-describe("tz-lookup", function() {
-  function test(lat, lon, tzid) {
-    it("should return \"" + tzid + "\" given " + lat + ", " + lon, function() {
-      expect(tz(lat, lon)).to.equal(tzid);
-    });
-  }
+function test(lat, lon, tzid) {
+  it("should return \"" + tzid + "\" given " + lat + ", " + lon, () => {
+    expect(tz(lat, lon)).to.equal(tzid);
+  });
+}
 
-  function fuzz(lat, lon, tzid) {
-    it("should return \"" + tzid + "\" (or something more specific) given " + lat + ", " + lon, function() {
-      var timezone = tz(lat, lon);
+function fuzz(lat, lon, tzid) {
+  it("should return \"" + tzid + "\" (or something more specific) given " + lat + ", " + lon, () => {
+    const timezone = tz(lat, lon);
 
-      if(tzid.slice(0, 3) !== "Etc" || timezone.slice(0, 3) === "Etc")
-        expect(timezone).to.equal(tzid);
-    });
-  }
+    if(!tzid.startsWith("Etc") || timezone.startsWith("Etc"))
+      expect(timezone).to.equal(tzid);
+  });
+}
 
-  function errorTest(lat, lon) {
-    it("should throw an error given " + lat + ", " + lon, function() {
-      try {
-        tz(lat, lon)
-      } catch (ex) {
-        expect(ex.message).to.equal("invalid coordinates");
-        return;
-      }
-      throw "Should not get here."
-    });
-  }
+function errorTest(lat, lon) {
+  it("should throw an error given " + lat + ", " + lon, () => {
+    try {
+      tz(lat, lon)
+    } catch (ex) {
+      expect(ex.message).to.equal("invalid coordinates");
+      return;
+    }
+    throw "Should not get here."
+  });
+}
 
+describe("tz-lookup", () => {
   /* These tests are hand-crafted. */
   test( 40.7092,  -74.0151,             "America/New_York");
   test( 42.3668,  -71.0546,             "America/New_York");
