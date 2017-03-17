@@ -1,8 +1,8 @@
 "use strict";
 const fs            = require("fs"),
       path          = require("path"),
-      DATA          = fs.readFileSync(path.join(__dirname, "./tz_world.bin")),
-      TIMEZONE_LIST = require("./tz_world_index.json"),
+      DATA          = fs.readFileSync(path.join(__dirname, "./tz.bin")),
+      TIMEZONE_LIST = require("./tz.json"),
       COARSE_WIDTH  = 48,
       COARSE_HEIGHT = 24,
       FINE_WIDTH    = 2,

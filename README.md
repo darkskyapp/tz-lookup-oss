@@ -31,25 +31,28 @@ To use:
 *   The timezones returned by this module are approximate: since the timezone
     database is so large, lossy compression is necessary for fast lookups. In
     particular, the compression used may be of insufficient resolution for
-    several very small timezones (such as Europe/Vatican) and favors country
-    timezones over GMT offsets (and so may exaggerate the distance of
-    territorial waters). However, the level of accuracy should be adequate for
-    most purposes. (For example, this module is used by the [Dark Sky API][1]
-    for global timezone lookups.)
+    several very small timezones and favors country timezones over GMT offsets
+    (and so may exaggerate the distance of territorial waters). However, the
+    level of accuracy should be adequate for most purposes. (For example, this
+    module is used by the [Dark Sky API][1] for global timezone lookups.)
 
 If you find a real-world case where this module's accuracy is inadequate,
 please open an issue (or, better yet, submit a pull request with a failing
 test) and I'll see what I can do to increase the accuracy for you.
 
+[1]: https://darksky.net/dev/
+
 Sources
 -------
 
-Timezone data is from Eric Muller's excellent [TZ timezone maps][2]. To
-regenerate the compressed database, simply run `rebuild.sh`. The timezone
-database was last updated on 28 May 2016.
+Versions prior to 6.0.7 used timezone data from Eric Muller's excellent [TZ
+timezone maps][2]. As of 6.0.7, we now use timezone data from @evansiroky's
+also-excellent [timezone-boundary-builder][3]. To regenerate the compressed
+database, simply run `rebuild.sh`. The timezone database was last updated on
+8 Mar 2017.
 
-[1]: https://darksky.net/dev/
 [2]: http://efele.net/maps/tz/
+[3]: https://github.com/evansiroky/timezone-boundary-builder/
 
 License
 -------

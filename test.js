@@ -24,65 +24,68 @@ function errorTest(lat, lon) {
 }
 
 describe("tz-lookup", () => {
-  /* These tests are hand-crafted. */
-  test( 40.7092,  -74.0151,             "America/New_York");
-  test( 42.3668,  -71.0546,             "America/New_York");
-  test( 41.8976,  -87.6205,              "America/Chicago");
-  test( 47.6897, -122.4023,          "America/Los_Angeles");
-  test( 42.7235,  -73.6931,             "America/New_York");
-  test( 42.5807,  -83.0223,              "America/Detroit");
-  test( 36.8381,  -84.8500,  "America/Kentucky/Monticello");
+  /* These tests are hand-crafted for specific locations. */
+  test( 40.7092,  -74.0151, "America/New_York");
+  test( 42.3668,  -71.0546, "America/New_York");
+  test( 41.8976,  -87.6205, "America/Chicago");
+  test( 47.6897, -122.4023, "America/Los_Angeles");
+  test( 42.7235,  -73.6931, "America/New_York");
+  test( 42.5807,  -83.0223, "America/Detroit");
+  test( 36.8381,  -84.8500, "America/Kentucky/Monticello");
   test( 40.1674,  -85.3583, "America/Indiana/Indianapolis");
-  test( 37.9643,  -86.7453,    "America/Indiana/Tell_City");
-  test( 38.6043,  -90.2417,              "America/Chicago");
-  test( 41.1591, -104.8261,               "America/Denver");
-  test( 35.1991, -111.6348,              "America/Phoenix");
-  test( 43.1432, -115.6750,                "America/Boise");
-  test( 47.5886, -122.3382,          "America/Los_Angeles");
-  test( 58.3168, -134.4397,               "America/Juneau");
-  test( 21.4381, -158.0493,             "Pacific/Honolulu");
-  test( 42.7000,  -80.0000,              "America/Toronto");
-  test( 51.0036, -114.0161,             "America/Edmonton");
-  test(-16.4965,  -68.1702,               "America/La_Paz");
-  test(-31.9369,  115.8453,              "Australia/Perth");
-  test( 42.0000,  -87.5000,              "America/Chicago");
-  test( 36.9147, -111.4558,              "America/Phoenix");
+  test( 37.9643,  -86.7453, "America/Indiana/Tell_City");
+  test( 38.6043,  -90.2417, "America/Chicago");
+  test( 41.1591, -104.8261, "America/Denver");
+  test( 35.1991, -111.6348, "America/Phoenix");
+  test( 43.1432, -115.6750, "America/Boise");
+  test( 47.5886, -122.3382, "America/Los_Angeles");
+  test( 58.3168, -134.4397, "America/Juneau");
+  test( 21.4381, -158.0493, "Pacific/Honolulu");
+  test( 42.7000,  -80.0000, "America/Toronto");
+  test( 51.0036, -114.0161, "America/Edmonton");
+  test(-16.4965,  -68.1702, "America/La_Paz");
+  test(-31.9369,  115.8453, "Australia/Perth");
+  test( 42.0000,  -87.5000, "America/Chicago");
+  test( 36.9147, -111.4558, "America/Phoenix");
 
+  /* Sanity-check international waters. */
   test(-65, -180, "Etc/GMT+12");
   test(-65, -165, "Etc/GMT+11");
   test(-65, -150, "Etc/GMT+10");
-  test(-65, -135, "Etc/GMT+9" );
-  test(-65, -120, "Etc/GMT+8" );
-  test(-65, -105, "Etc/GMT+7" );
-  test(-65,  -90, "Etc/GMT+6" );
-  test(-65,  -75, "Etc/GMT+5" );
-  test(-65,  -60, "Etc/GMT+4" );
-  test(-65,  -45, "Etc/GMT+3" );
-  test(-65,  -30, "Etc/GMT+2" );
-  test(-65,  -15, "Etc/GMT+1" );
-  test(-65,    0, "Etc/GMT"   );
-  test(-65,   15, "Etc/GMT-1" );
-  test(-65,   30, "Etc/GMT-2" );
-  test(-65,   45, "Etc/GMT-3" );
-  test(-65,   60, "Etc/GMT-4" );
-  test(-65,   75, "Etc/GMT-5" );
-  test(-65,   90, "Etc/GMT-6" );
-  test(-65,  105, "Etc/GMT-7" );
-  test(-65,  120, "Etc/GMT-8" );
-  test(-65,  135, "Etc/GMT-9" );
+  test(-65, -135, "Etc/GMT+9");
+  test(-65, -120, "Etc/GMT+8");
+  test(-65, -105, "Etc/GMT+7");
+  test(-65,  -90, "Etc/GMT+6");
+  test(-65,  -75, "Etc/GMT+5");
+  test(-65,  -60, "Etc/GMT+4");
+  test(-65,  -45, "Etc/GMT+3");
+  test(-65,  -30, "Etc/GMT+2");
+  test(-65,  -15, "Etc/GMT+1");
+  test(-65,    0, "Etc/GMT");
+  test(-65,   15, "Etc/GMT-1");
+  test(-65,   30, "Etc/GMT-2");
+  test(-65,   45, "Etc/GMT-3");
+  test(-65,   60, "Etc/GMT-4");
+  test(-65,   75, "Etc/GMT-5");
+  test(-65,   90, "Etc/GMT-6");
+  test(-65,  105, "Etc/GMT-7");
+  test(-65,  120, "Etc/GMT-8");
+  test(-65,  135, "Etc/GMT-9");
   test(-65,  150, "Etc/GMT-10");
   test(-65,  165, "Etc/GMT-11");
   test(-65,  180, "Etc/GMT-12");
 
-  test( "42.3668",  "-71.0546", "America/New_York");
-  test( "21.4381", "-158.0493", "Pacific/Honolulu");
+  /* Strings should be allowed. */
+  test("42.3668",  "-71.0546", "America/New_York");
+  test("21.4381", "-158.0493", "Pacific/Honolulu");
 
+  /* Bizarre inputs should not. */
   errorTest(100, 10);
   errorTest(10, 190);
   errorTest("hello", 10);
   errorTest(10, "hello");
   errorTest(undefined, undefined);
-  errorTest({lat: 10, lon: 10}, null);
+  errorTest({lat: 10, lon: 10});
 
   /* These are automatically-generated test-cases just so I can be confident
    * when I change the data storage format all around. */

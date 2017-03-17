@@ -2,30 +2,29 @@
 set -e
 
 # get data
-curl -L -O http://efele.net/maps/tz/world/tz_world_mp.zip -O http://www.naturalearthdata.com/http//www.naturalearthdata.com/download/10m/cultural/ne_10m_urban_areas.zip -O http://www.naturalearthdata.com/http//www.naturalearthdata.com/download/10m/cultural/ne_10m_populated_places_simple.zip
+curl -L -O https://github.com/evansiroky/timezone-boundary-builder/releases/download/2017a/timezones.geojson.zip -O http://www.naturalearthdata.com/http//www.naturalearthdata.com/download/10m/cultural/ne_10m_urban_areas.zip -O http://www.naturalearthdata.com/http//www.naturalearthdata.com/download/10m/cultural/ne_10m_populated_places_simple.zip
 
 # unpack tz_world_mp into a useable format. (we do this into a few tiles
 # because otherwise they're too big for Node to manage :( )
-unzip tz_world_mp.zip
-ogr2ogr -f GeoJSON tz_world_mp.json world/tz_world_mp.shp
+unzip timezones.geojson.zip
 node add_indices
-gdal_rasterize -a Z -te -180 0 -90 90 -ts 12288 12288 -ot UInt16 tz_world_mp_indexed.json tz_world_a.tiff
-gdal_rasterize -a Z -te -90 0 0 90 -ts 12288 12288 -ot UInt16 tz_world_mp_indexed.json tz_world_b.tiff
-gdal_rasterize -a Z -te 0 0 90 90 -ts 12288 12288 -ot UInt16 tz_world_mp_indexed.json tz_world_c.tiff
-gdal_rasterize -a Z -te 90 0 180 90 -ts 12288 12288 -ot UInt16 tz_world_mp_indexed.json tz_world_d.tiff
-gdal_rasterize -a Z -te -180 -90 -90 0 -ts 12288 12288 -ot UInt16 tz_world_mp_indexed.json tz_world_e.tiff
-gdal_rasterize -a Z -te -90 -90 0 0 -ts 12288 12288 -ot UInt16 tz_world_mp_indexed.json tz_world_f.tiff
-gdal_rasterize -a Z -te 0 -90 90 0 -ts 12288 12288 -ot UInt16 tz_world_mp_indexed.json tz_world_g.tiff
-gdal_rasterize -a Z -te 90 -90 180 0 -ts 12288 12288 -ot UInt16 tz_world_mp_indexed.json tz_world_h.tiff
-convert tz_world_a.tiff tz_world_a.pgm
-convert tz_world_b.tiff tz_world_b.pgm
-convert tz_world_c.tiff tz_world_c.pgm
-convert tz_world_d.tiff tz_world_d.pgm
-convert tz_world_e.tiff tz_world_e.pgm
-convert tz_world_f.tiff tz_world_f.pgm
-convert tz_world_g.tiff tz_world_g.pgm
-convert tz_world_h.tiff tz_world_h.pgm
-rm -rf tz_world_a.tiff tz_world_b.tiff tz_world_c.tiff tz_world_d.tiff tz_world_e.tiff tz_world_f.tiff tz_world_g.tiff tz_world_h.tiff tz_world_mp.json tz_world_mp_indexed.json world
+gdal_rasterize -a z -te -180 0 -90 90 -ts 12288 12288 -ot UInt16 tz_indexed.json tz_a.tiff
+gdal_rasterize -a z -te -90 0 0 90 -ts 12288 12288 -ot UInt16 tz_indexed.json tz_b.tiff
+gdal_rasterize -a z -te 0 0 90 90 -ts 12288 12288 -ot UInt16 tz_indexed.json tz_c.tiff
+gdal_rasterize -a z -te 90 0 180 90 -ts 12288 12288 -ot UInt16 tz_indexed.json tz_d.tiff
+gdal_rasterize -a z -te -180 -90 -90 0 -ts 12288 12288 -ot UInt16 tz_indexed.json tz_e.tiff
+gdal_rasterize -a z -te -90 -90 0 0 -ts 12288 12288 -ot UInt16 tz_indexed.json tz_f.tiff
+gdal_rasterize -a z -te 0 -90 90 0 -ts 12288 12288 -ot UInt16 tz_indexed.json tz_g.tiff
+gdal_rasterize -a z -te 90 -90 180 0 -ts 12288 12288 -ot UInt16 tz_indexed.json tz_h.tiff
+convert tz_a.tiff tz_a.pgm
+convert tz_b.tiff tz_b.pgm
+convert tz_c.tiff tz_c.pgm
+convert tz_d.tiff tz_d.pgm
+convert tz_e.tiff tz_e.pgm
+convert tz_f.tiff tz_f.pgm
+convert tz_g.tiff tz_g.pgm
+convert tz_h.tiff tz_h.pgm
+rm -rf dist tz_a.tiff tz_b.tiff tz_c.tiff tz_d.tiff tz_e.tiff tz_f.tiff tz_g.tiff tz_h.tiff tz_indexed.json
 
 # unpack ne_10m_urban_areas into a useable format. (we do this into a single
 # file because even at large sizes bitmaps are pretty manageable.)
@@ -41,4 +40,4 @@ rm -rf ne_10m_populated_places_simple.README.html ne_10m_populated_places_simple
 
 # repack tz_world_mp and ne_10m_urban_areas into a compressed image
 node pack
-rm -rf tz_world.pgm ne_10m_urban_areas.pbm ne_10m_populated_places_simple.json
+rm -rf ne_10m_populated_places_simple.json ne_10m_urban_areas.pbm tz_a.pgm tz_b.pgm tz_c.pgm tz_d.pgm tz_e.pgm tz_f.pgm tz_g.pgm tz_h.pgm

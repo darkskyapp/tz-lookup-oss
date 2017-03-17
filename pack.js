@@ -2,7 +2,7 @@
 const width = 49152;
 const height = 24576;
 const fs = require("fs");
-const index = require("./tz_world_index");
+const index = require("./tz");
 
 function read(pathname, offset, buffer) {
   const fd = fs.openSync(pathname, "r");
@@ -145,7 +145,7 @@ function coarse() {
   const tz_data = Buffer.allocUnsafe((width / 4) * (height / 2) * 2);
   for(let y = 0; y < 2; y++) {
     for(let x = 0; x < 4; x++) {
-      read("tz_world_" + (y * 4 + x + 10).toString(36) + ".pgm", 21, tz_data);
+      read("tz_" + (y * 4 + x + 10).toString(36) + ".pgm", 21, tz_data);
 
       force_tz(36.9147, -111.4558, "America/Phoenix", tz_data, x, y);
 
@@ -203,4 +203,4 @@ function pack(root) {
   return buffer;
 }
 
-fs.writeFileSync("tz_world.bin", pack(coarse()));
+fs.writeFileSync("tz.bin", pack(coarse()));
