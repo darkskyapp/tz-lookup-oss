@@ -2,21 +2,25 @@
 const fs = require("fs");
 
 // grab the geojson
-const geojson = require("./tz_world_mp");
-// sort by TZID
+const geojson = require("./dist/combined.json");
+// sort by tzid
 geojson.features.sort((a, b) =>
-  a.properties["TZID"].localeCompare(b.properties["TZID"]));
-// the last TZID is "uninhabited", which we don't care about
-geojson.features.pop();
+  a.properties["tzid"].localeCompare(b.properties["tzid"]));
+const map = new Map();
+let count = 0;
 // add an index property (this is needed by gdal_rasterize)
-for(let i = 0;
-    i < geojson.features.length;
-    geojson.features[i].properties["Z"] = ++i);
+for(let feature of geojson.features) {
+  const tzid = feature.properties["tzid"];
+  if(!map.has(tzid)) {
+    map.set(tzid, ++count);
+  }
+  feature.properties["z"] = map.get(tzid);
+}
 // write the indexed geojson
-fs.writeFileSync("tz_world_mp_indexed.json", JSON.stringify(geojson));
+fs.writeFileSync("tz_indexed.json", JSON.stringify(geojson));
 
 // grab the index
-const index = geojson.features.map(x => x.properties["TZID"]);
+const index = Array.from(map.keys());
 // add international TZIDs (this is needed by the final output file)
 index.push(
   "Etc/GMT+12", "Etc/GMT+11", "Etc/GMT+10", "Etc/GMT+9",  "Etc/GMT+8",
@@ -26,4 +30,4 @@ index.push(
   "Etc/GMT-8",  "Etc/GMT-9",  "Etc/GMT-10", "Etc/GMT-11", "Etc/GMT-12"
 );
 // write the index
-fs.writeFileSync("tz_world_index.json", JSON.stringify(index));
+fs.writeFileSync("tz.json", JSON.stringify(index));
