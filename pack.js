@@ -39,6 +39,28 @@ function force_urban(lat, lon, buffer) {
   }
 }
 
+function force_tz(lat, lon, tzid, buffer, tile_x, tile_y) {
+  const tile_size = width / 4;
+
+  const x = (180 + lon) * width  / 360.00000000000006 - tile_x * tile_size,
+        y = ( 90 - lat) * height / 180.00000000000003 - tile_y * tile_size,
+        z = index.indexOf(tzid) + 1;
+  if(z === 0) {
+    return;
+  }
+
+  const r = 10,
+        min_x = constrain(Math.floor(x - r    ), 0, tile_size),
+        min_y = constrain(Math.floor(y - r    ), 0, tile_size),
+        max_x = constrain(Math.floor(x + r + 1), 0, tile_size),
+        max_y = constrain(Math.floor(y + r + 1), 0, tile_size);
+  for(let y = min_y; y < max_y; y++) {
+    for(let x = min_x; x < max_x; x++) {
+      buffer.writeUInt16BE(z, (y * tile_size + x) * 2);
+    }
+  }
+}
+
 function fine(urban_data, urban_x, urban_y, tz_data, tz_x, tz_y, size) {
   const tz_width = width / 4;
   const tz_height = height / 4;
@@ -116,13 +138,16 @@ function coarse() {
   }
 
   /* Manually fix specific resolution problem locations. */
-  force_urban(36.8381, -84.8500, urban_data);
-  force_urban(37.9643, -86.7453, urban_data);
+  force_urban(36.8381,  -84.8500, urban_data);
+  force_urban(37.9643,  -86.7453, urban_data);
+  force_urban(36.9147, -111.4558, urban_data);
 
   const tz_data = Buffer.allocUnsafe((width / 4) * (height / 2) * 2);
   for(let y = 0; y < 2; y++) {
     for(let x = 0; x < 4; x++) {
       read("tz_world_" + (y * 4 + x + 10).toString(36) + ".pgm", 21, tz_data);
+
+      force_tz(36.9147, -111.4558, "America/Phoenix", tz_data, x, y);
 
       for(let v = 0; v < 12; v++) {
         for(let u = 0; u < 12; u++) {
