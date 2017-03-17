@@ -12,8 +12,9 @@ function fuzz(lat, lon, tzid) {
   it("should return \"" + tzid + "\" (or something more specific) given " + lat + ", " + lon, () => {
     const timezone = tz(lat, lon);
 
-    if(!tzid.startsWith("Etc") || timezone.startsWith("Etc"))
+    if(!tzid.startsWith("Etc") || timezone.startsWith("Etc")) {
       expect(timezone).to.equal(tzid);
+    }
   });
 }
 
@@ -21,11 +22,14 @@ function errorTest(lat, lon) {
   it("should throw an error given " + lat + ", " + lon, () => {
     try {
       tz(lat, lon)
-    } catch (ex) {
-      expect(ex.message).to.equal("invalid coordinates");
+    }
+    catch(ex) {
+      expect(ex).
+        to.have.a.property("message").
+        that.equals("invalid coordinates");
       return;
     }
-    throw "Should not get here."
+    throw new Error("Should not get here.");
   });
 }
 
@@ -54,17 +58,41 @@ describe("tz-lookup", () => {
   test( 42.0000,  -87.5000,              "America/Chicago");
   test( 36.9147, -111.4558,              "America/Phoenix");
 
-  /* Can handle string input as well as numerical input */
-  test( "42.3668",  "-71.0546",         "America/New_York");
-  test( "21.4381", "-158.0493",         "Pacific/Honolulu");
+  test(-65, -180, "Etc/GMT+12");
+  test(-65, -165, "Etc/GMT+11");
+  test(-65, -150, "Etc/GMT+10");
+  test(-65, -135, "Etc/GMT+9" );
+  test(-65, -120, "Etc/GMT+8" );
+  test(-65, -105, "Etc/GMT+7" );
+  test(-65,  -90, "Etc/GMT+6" );
+  test(-65,  -75, "Etc/GMT+5" );
+  test(-65,  -60, "Etc/GMT+4" );
+  test(-65,  -45, "Etc/GMT+3" );
+  test(-65,  -30, "Etc/GMT+2" );
+  test(-65,  -15, "Etc/GMT+1" );
+  test(-65,    0, "Etc/GMT"   );
+  test(-65,   15, "Etc/GMT-1" );
+  test(-65,   30, "Etc/GMT-2" );
+  test(-65,   45, "Etc/GMT-3" );
+  test(-65,   60, "Etc/GMT-4" );
+  test(-65,   75, "Etc/GMT-5" );
+  test(-65,   90, "Etc/GMT-6" );
+  test(-65,  105, "Etc/GMT-7" );
+  test(-65,  120, "Etc/GMT-8" );
+  test(-65,  135, "Etc/GMT-9" );
+  test(-65,  150, "Etc/GMT-10");
+  test(-65,  165, "Etc/GMT-11");
+  test(-65,  180, "Etc/GMT-12");
 
-  /* These tests handle bad input. */
-  errorTest( 100, 10 );
-  errorTest( 10, 190 );
-  errorTest( "hello", 10 );
-  errorTest( 10, "hello" );
-  errorTest( undefined, undefined );
-  errorTest( {lat: 10, lon: 10}, null );
+  test( "42.3668",  "-71.0546", "America/New_York");
+  test( "21.4381", "-158.0493", "Pacific/Honolulu");
+
+  errorTest(100, 10);
+  errorTest(10, 190);
+  errorTest("hello", 10);
+  errorTest(10, "hello");
+  errorTest(undefined, undefined);
+  errorTest({lat: 10, lon: 10}, null);
 
   /* These are automatically-generated fuzz-tests from v1. */
   fuzz( 74.1570,  171.0540, "Etc/GMT-11");
