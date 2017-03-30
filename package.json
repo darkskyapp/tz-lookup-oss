@@ -2,6 +2,7 @@
   "name": "tz-lookup",
   "version": "6.0.7",
   "description": "fast time zone lookup",
+  "main": "tz.js",
   "keywords": [
     "tz",
     "timezone",
