@@ -5,6 +5,10 @@
       TZDATA = fs.readFileSync(path.join(__dirname, "./tz.bin")),
       TZLIST = require("./tz.json");
 
+  function get(i) {
+    return (TZDATA[(i << 1) | 0] << 8) | TZDATA[(i << 1) | 1];
+  }
+
   function tzlookup(lat, lon) {
     /* Make sure lat/lon are valid numbers. (It is unusual to check for the
      * negation of whether the values are in range, but this form works for
@@ -41,7 +45,7 @@
     /* Contents of the child node. The topmost values are reserved for leaf
      * nodes and correspond to the indices of TZLIST. Every other value is a
      * pointer to where the next node in the tree is. */
-    var i = TZDATA.readUIntBE((v * 48 + u) * 2, 2);
+    var i = get(v * 48 + u);
 
     /* Recurse until we hit a leaf node. */
     while(i + TZLIST.length < 65536) {
@@ -55,7 +59,7 @@
       v = y|0;
 
       /* Read the child node. */
-      i = TZDATA.readUIntBE((48 * 24 + n * 4 + v * 2 + u) * 2, 2);
+      i = get(48 * 24 + n * 4 + v * 2 + u);
     }
 
     /* Once we hit a leaf, return the relevant timezone. */
