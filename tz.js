@@ -6,6 +6,7 @@
       TZLIST = require("./tz.json");
 
   function get(i) {
+    /* Read a uint16 manually to sidestep endianness issues. */
     return (TZDATA[(i << 1) | 0] << 8) | TZDATA[(i << 1) | 1];
   }
 
