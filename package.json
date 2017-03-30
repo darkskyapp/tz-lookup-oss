@@ -17,7 +17,6 @@
     "url": "git://github.com/darkskyapp/tz-lookup.git"
   },
   "devDependencies": {
-    "chai": "*",
     "mocha": "*"
   },
   "scripts": {
