@@ -3,7 +3,7 @@
   var BASE90 = " #$%&()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_abcdefghijklmnopqrstuvwxyz{|}~";
   function unpack(string) {
     var n = string.length >> 1,
-        array = new Array(n);
+        array = new Uint16Array(n);
     while(n--) {
       array[n] = BASE90.indexOf(string[n * 2 + 0]) * 90 + BASE90.indexOf(string[n * 2 + 1]);
     }
