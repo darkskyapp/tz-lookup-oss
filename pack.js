@@ -190,7 +190,7 @@ function pack(root) {
       let x;
       if(Array.isArray(b)) {
         x = b.index - a.index - 1;
-        if(x + index.length >= 8100) {
+        if(x < 0 || x + index.length >= 8100) {
           throw new Error("cannot pack in the current format");
         }
       }
@@ -208,6 +208,6 @@ function pack(root) {
 console.log(
   "%s",
   fs.readFileSync("tz_template.js", "utf8").
-    replace("__TZDATA__", JSON.stringify(pack(coarse()))).
-    replace("__TZLIST__", JSON.stringify(index))
+    replace(/__TZDATA__/, () => JSON.stringify(pack(coarse()))).
+    replace(/__TZLIST__/, () => JSON.stringify(index))
 );
