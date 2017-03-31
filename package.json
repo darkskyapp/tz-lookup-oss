@@ -17,7 +17,8 @@
     "url": "git://github.com/darkskyapp/tz-lookup.git"
   },
   "devDependencies": {
-    "mocha": "*"
+    "mocha": "*",
+    "uglify-js": "*"
   },
   "scripts": {
     "test": "mocha"

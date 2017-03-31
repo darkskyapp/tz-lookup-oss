@@ -1,6 +1,12 @@
 (function() {
   "use strict";
-  var tz = require("./");
+  var tz;
+  if(typeof require !== "undefined") {
+    tz = require("./");
+  }
+  else {
+    tz = window.tzlookup;
+  }
 
   function stringify_item(x) {
     return "" + x;
@@ -44,7 +50,7 @@
     });
   }
 
-  describe("tz-lookup", function() {
+  describe("tzlookup", function() {
     [
       /* These tests are hand-crafted for specific locations. */
       [[ 40.7092,  -74.0151], "America/New_York"            ],
