@@ -1,5 +1,4 @@
 "use strict";
-const base90 = " #$%&()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_abcdefghijklmnopqrstuvwxyz{|}~";
 const width = 49152;
 const height = 24576;
 const fs = require("fs");
@@ -190,15 +189,15 @@ function pack(root) {
       let x;
       if(Array.isArray(b)) {
         x = b.index - a.index - 1;
-        if(x < 0 || x + index.length >= 8100) {
+        if(x < 0 || x + index.length >= 3136) {
           throw new Error("cannot pack in the current format");
         }
       }
       else {
-        x = 8100 - index.length + b;
+        x = 3136 - index.length + b;
       }
 
-      string += base90[Math.floor(x / 90)] + base90[x % 90];
+      string += String.fromCharCode(Math.floor(x / 56) + 35, (x % 56) + 35);
     }
   }
 
