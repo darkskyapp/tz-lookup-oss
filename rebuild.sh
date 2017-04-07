@@ -43,5 +43,5 @@ ogr2ogr -f GeoJSON ne_10m_populated_places_simple.json ne_10m_populated_places_s
 rm -rf ne_10m_populated_places_simple.README.html ne_10m_populated_places_simple.VERSION.txt ne_10m_populated_places_simple.dbf ne_10m_populated_places_simple.prj ne_10m_populated_places_simple.shp ne_10m_populated_places_simple.shx ne_10m_populated_places_simple.zip
 
 # repack tz_world_mp and ne_10m_urban_areas into a compressed image
-node pack
-rm -rf ne_10m_populated_places_simple.json ne_10m_urban_areas.pbm tz_a.pgm tz_b.pgm tz_c.pgm tz_d.pgm tz_e.pgm tz_f.pgm tz_g.pgm tz_h.pgm
+node pack | ./node_modules/.bin/uglifyjs -mc >tz.js
+rm -rf ne_10m_populated_places_simple.json ne_10m_urban_areas.pbm tz.json tz_a.pgm tz_b.pgm tz_c.pgm tz_d.pgm tz_e.pgm tz_f.pgm tz_g.pgm tz_h.pgm

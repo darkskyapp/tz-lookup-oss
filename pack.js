@@ -2,7 +2,7 @@
 const width = 49152;
 const height = 24576;
 const fs = require("fs");
-const index = require("./tz");
+const index = require("./tz.json");
 
 function read(pathname, offset, buffer) {
   const fd = fs.openSync(pathname, "r");
@@ -180,27 +180,33 @@ function pack(root) {
     }
   }
 
-  const buffer = Buffer.allocUnsafe((48 * 24 + (list.length - 1) * 2 * 2) * 2);
-  let off = 0;
+  let string = "";
   for(let i = 0; i < list.length; i++) {
     const a = list[i];
     for(let j = 0; j < a.length; j++) {
       const b = a[j];
-      buffer.writeUIntBE(
-        Array.isArray(b)?
-          (b.index - a.index - 1):
-          65536 - index.length + b,
-        off,
-        2
-      );
-      off += 2;
+
+      let x;
+      if(Array.isArray(b)) {
+        x = b.index - a.index - 1;
+        if(x < 0 || x + index.length >= 3136) {
+          throw new Error("cannot pack in the current format");
+        }
+      }
+      else {
+        x = 3136 - index.length + b;
+      }
+
+      string += String.fromCharCode(Math.floor(x / 56) + 35, (x % 56) + 35);
     }
   }
-  if(off !== buffer.length) {
-    throw new Error("eep");
-  }
 
-  return buffer;
+  return string;
 }
 
-fs.writeFileSync("tz.bin", pack(coarse()));
+console.log(
+  "%s",
+  fs.readFileSync("tz_template.js", "utf8").
+    replace(/__TZDATA__/, () => JSON.stringify(pack(coarse()))).
+    replace(/__TZLIST__/, () => JSON.stringify(index))
+);

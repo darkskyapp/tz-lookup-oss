@@ -1,7 +1,8 @@
 {
   "name": "tz-lookup",
-  "version": "6.0.7",
+  "version": "6.1.0",
   "description": "fast time zone lookup",
+  "main": "tz.js",
   "keywords": [
     "tz",
     "timezone",
@@ -16,8 +17,8 @@
     "url": "git://github.com/darkskyapp/tz-lookup.git"
   },
   "devDependencies": {
-    "chai": "*",
-    "mocha": "*"
+    "mocha": "*",
+    "uglify-js": "*"
   },
   "scripts": {
     "test": "mocha"
