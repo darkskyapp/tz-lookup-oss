@@ -75,6 +75,8 @@ describe("tzlookup", function() {
     [[ 42.0000,  -87.5000], "America/Chicago"             ],
     [[ 36.9147, -111.4558], "America/Phoenix"             ],
     [[ 46.1328,  -64.7714], "America/Moncton"             ],
+    [[ 44.9280,  -87.1853], "America/Chicago"             ],
+    [[ 50.7029,  -57.3511], "America/St_Johns"            ],
 
     /* Sanity-check international waters. */
     [[-65, -180], "Etc/GMT+12"],
