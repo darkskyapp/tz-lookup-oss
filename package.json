@@ -1,6 +1,6 @@
 {
   "name": "tz-lookup",
-  "version": "6.1.1",
+  "version": "6.1.2",
   "description": "fast time zone lookup",
   "main": "tz.js",
   "keywords": [
