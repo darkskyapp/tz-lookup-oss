@@ -144,6 +144,7 @@ function coarse() {
   force_urban(44.9280,  -87.1853, urban_data); // fix #13
   force_urban(50.7029,  -57.3511, urban_data); // fix #13
   force_urban(49.7261,   -1.9104, urban_data); // fix #15
+  force_urban(65.5280,   23.5570, urban_data); // fix #16
 
   const tz_data = Buffer.allocUnsafe((width / 4) * (height / 2) * 2);
   for(let y = 0; y < 2; y++) {
