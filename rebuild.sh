@@ -1,6 +1,6 @@
 #!/bin/bash
 set -e
-TZ="2017a"
+TZ="2017c"
 
 # get data
 curl -L \
