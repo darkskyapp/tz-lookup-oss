@@ -3,7 +3,7 @@ set -e
 TZ="2017c"
 
 # get data
-curl -L \
+curl -L --retry 3 -C - \
   -O "https://github.com/evansiroky/timezone-boundary-builder/releases/download/$TZ/timezones.geojson.zip" \
   -O "http://www.naturalearthdata.com/http//www.naturalearthdata.com/download/10m/cultural/ne_10m_urban_areas.zip" \
   -O "http://www.naturalearthdata.com/http//www.naturalearthdata.com/download/10m/cultural/ne_10m_populated_places_simple.zip"
@@ -35,12 +35,12 @@ rm -rf dist timezones.geojson.zip tz_a.tiff tz_b.tiff tz_c.tiff tz_d.tiff tz_e.t
 unzip ne_10m_urban_areas.zip
 gdal_rasterize -burn 255 -te -180 -90 180 90 -ts 49152 24576 -ot Byte ne_10m_urban_areas.shp ne_10m_urban_areas.tiff
 convert ne_10m_urban_areas.tiff ne_10m_urban_areas.pbm
-rm -rf ne_10m_urban_areas.README.html ne_10m_urban_areas.VERSION.txt ne_10m_urban_areas.dbf ne_10m_urban_areas.shp ne_10m_urban_areas.shx ne_10m_urban_areas.prj ne_10m_urban_areas.tiff ne_10m_urban_areas.zip
+rm -rf ne_10m_urban_areas.README.html ne_10m_urban_areas.VERSION.txt ne_10m_urban_areas.cpg ne_10m_urban_areas.dbf ne_10m_urban_areas.shp ne_10m_urban_areas.shx ne_10m_urban_areas.prj ne_10m_urban_areas.tiff ne_10m_urban_areas.zip
 
 # and, for good measure, populated places
 unzip ne_10m_populated_places_simple.zip
 ogr2ogr -f GeoJSON ne_10m_populated_places_simple.json ne_10m_populated_places_simple.shp
-rm -rf ne_10m_populated_places_simple.README.html ne_10m_populated_places_simple.VERSION.txt ne_10m_populated_places_simple.dbf ne_10m_populated_places_simple.prj ne_10m_populated_places_simple.shp ne_10m_populated_places_simple.shx ne_10m_populated_places_simple.zip
+rm -rf ne_10m_populated_places_simple.README.html ne_10m_populated_places_simple.VERSION.txt ne_10m_populated_places_simple.cpg ne_10m_populated_places_simple.dbf ne_10m_populated_places_simple.prj ne_10m_populated_places_simple.shp ne_10m_populated_places_simple.shx ne_10m_populated_places_simple.zip
 
 # repack tz_world_mp and ne_10m_urban_areas into a compressed image
 node pack | ./node_modules/.bin/uglifyjs -mc >tz.js
