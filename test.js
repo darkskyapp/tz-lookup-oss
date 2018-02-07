@@ -80,6 +80,7 @@ describe("tzlookup", function() {
     [[ 29.9414,  -85.4064], "America/Chicago"], // #14
     [[ 49.7261,   -1.9104], "Europe/Paris"], // #15
     [[ 65.5280,   23.5570], "Europe/Stockholm"], // #16
+    [[ 35.8722,  -84.5250], "America/New_York"], // #18
 
     /* Sanity-check international waters. */
     [[-65, -180], "Etc/GMT+12"],

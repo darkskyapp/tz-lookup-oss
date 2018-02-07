@@ -115,7 +115,7 @@ function coarse() {
     }
   }
 
-  /* Manually fix specific resolution problem locations. */
+  // Manually fix specific resolution problem locations.
   force_urban(36.8381,  -84.8500, urban_data);
   force_urban(37.9643,  -86.7453, urban_data);
   force_urban(36.9147, -111.4558, urban_data); // fix #7
@@ -124,6 +124,7 @@ function coarse() {
   force_urban(29.9414,  -85.4064, urban_data); // fix #14
   force_urban(49.7261,   -1.9104, urban_data); // fix #15
   force_urban(65.5280,   23.5570, urban_data); // fix #16
+  force_urban(35.8722,  -84.5250, urban_data); // fix #18
 
   const tz_data = Buffer.allocUnsafe((width / 4) * (height / 2) * 2);
   for(let y = 0; y < 2; y++) {
