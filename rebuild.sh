@@ -1,6 +1,6 @@
 #!/bin/bash
 set -e
-TZ="2017c"
+TZ="2018d"
 
 # get data
 curl -L --retry 3 -C - \
