@@ -1,26 +1,27 @@
 {
-  "name": "tz-lookup",
-  "version": "6.1.7",
+  "author": {
+    "email": "developer@darksky.net",
+    "name": "The Dark Sky Company"
+  },
   "description": "fast time zone lookup",
-  "main": "tz.js",
+  "devDependencies": {
+    "mocha": "*",
+    "uglify-js": "*"
+  },
   "keywords": [
     "tz",
     "timezone",
     "time zone"
   ],
-  "author": {
-    "name": "The Dark Sky Company",
-    "email": "developer@darksky.net"
-  },
+  "license": "CC0"
+  "main": "tz.js",
+  "name": "tz-lookup",
   "repository": {
     "type": "git",
     "url": "git://github.com/darkskyapp/tz-lookup.git"
   },
-  "devDependencies": {
-    "mocha": "*",
-    "uglify-js": "*"
-  },
   "scripts": {
     "test": "mocha"
-  }
+  },
+  "version": "6.1.7"
 }
