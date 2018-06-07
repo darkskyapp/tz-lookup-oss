@@ -81,6 +81,14 @@ describe("tzlookup", function() {
     [[ 49.7261,   -1.9104], "Europe/Paris"], // #15
     [[ 65.5280,   23.5570], "Europe/Stockholm"], // #16
     [[ 35.8722,  -84.5250], "America/New_York"], // #18
+    [[ 60.0961,   18.7970], "Europe/Stockholm"], // #23 (Grisslehamn)
+    [[ 59.9942,   18.7794], "Europe/Stockholm"], // #23 (Ortala)
+    [[ 59.0500,   15.0412], "Europe/Stockholm"], // #23 (Tomta)
+    [[ 60.0270,   18.7594], "Europe/Stockholm"], // #23 (Björkkulla)
+    [[ 60.0779,   18.8102], "Europe/Stockholm"], // #23 (Kvarnsand)
+    [[ 60.0239,   18.7625], "Europe/Stockholm"], // #23 (Semmersby)
+    [[ 59.9983,   18.8548], "Europe/Stockholm"], // #23 (Gamla Grisslehamn)
+
 
     /* Sanity-check international waters. */
     [[-65, -180], "Etc/GMT+12"],
