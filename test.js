@@ -88,7 +88,15 @@ describe("tzlookup", function() {
     [[ 60.0779,   18.8102], "Europe/Stockholm"], // #23 (Kvarnsand)
     [[ 60.0239,   18.7625], "Europe/Stockholm"], // #23 (Semmersby)
     [[ 59.9983,   18.8548], "Europe/Stockholm"], // #23 (Gamla Grisslehamn)
+    [[ 37.3458,  -85.3456], "America/New_York"], // #24
 
+    // Collapse the north pole so that it always returns GMT regardless of the
+    // longitude.
+    [[90, -180], "Etc/GMT"], // #20
+    [[90,  -90], "Etc/GMT"], // #20
+    [[90,    0], "Etc/GMT"], // #20
+    [[90,   90], "Etc/GMT"], // #20
+    [[90,  180], "Etc/GMT"], // #20
 
     /* Sanity-check international waters. */
     [[-65, -180], "Etc/GMT+12"],

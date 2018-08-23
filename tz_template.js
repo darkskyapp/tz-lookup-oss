@@ -10,8 +10,13 @@ function tzlookup(lat, lon) {
   // NaNs, too!)
   lat = +lat;
   lon = +lon;
-  if(!(lat >= -90.0 && lat <= +90.0 && lon >= -180.0 && lon <= +180.0)) {
+  if(!(lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180)) {
     throw new RangeError("invalid coordinates");
+  }
+
+  // Special case the north pole.
+  if(lat >= 90) {
+    return TZLIST[TZLIST.length - 13];
   }
 
   // The tree is essentially a quadtree, but with a very large root node.
@@ -29,8 +34,8 @@ function tzlookup(lat, lon) {
   // are the smallest 64-bit floating-point numbers strictly greater than 360
   // and 180, respectively; we do this so that floor(x)<48 and floor(y)<24.
   // (It introduces a rounding error, but this is negligible.)
-  var x = (180.0 + lon) * 48 / 360.00000000000006,
-      y = ( 90.0 - lat) * 24 / 180.00000000000003;
+  var x = (180 + lon) * 48 / 360.00000000000006,
+      y = ( 90 - lat) * 24 / 180.00000000000003;
 
   // Integer coordinates of child node. x|0 is simply a (signed) integer
   // cast, which is the fastest way to do floor(x) in JavaScript when you
