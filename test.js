@@ -89,6 +89,12 @@ describe("tzlookup", function() {
     [[ 60.0239,   18.7625], "Europe/Stockholm"], // #23 (Semmersby)
     [[ 59.9983,   18.8548], "Europe/Stockholm"], // #23 (Gamla Grisslehamn)
     [[ 37.3458,  -85.3456], "America/New_York"], // #24
+    [[ 46.4547,  -90.1711], "America/Menominee"], // #25
+    [[ 46.4814,  -90.0531], "America/Menominee"], // #25
+    [[ 46.4753,  -89.9400], "America/Menominee"], // #25
+    [[ 46.3661,  -89.5969], "America/Menominee"], // #25
+    [[ 46.2678,  -89.1781], "America/Menominee"], // #25
+    [[ 45.1078,  -87.6142], "America/Menominee"], // #25
 
     // Collapse the north pole so that it always returns GMT regardless of the
     // longitude.
