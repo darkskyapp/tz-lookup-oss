@@ -95,6 +95,8 @@ describe("tzlookup", function() {
     [[ 46.3661,  -89.5969], "America/Menominee"], // #25
     [[ 46.2678,  -89.1781], "America/Menominee"], // #25
     [[ 45.1078,  -87.6142], "America/Menominee"], // #25
+    [[ 39.6217,  -87.4522], "America/Indiana/Indianapolis"], // #27
+    [[ 39.6631,  -87.4307], "America/Indiana/Indianapolis"], // #27
 
     // Collapse the north pole so that it always returns GMT regardless of the
     // longitude.
