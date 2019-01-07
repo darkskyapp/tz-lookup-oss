@@ -1,8 +1,12 @@
 "use strict";
-const GEOJSON = require("./dist/combined.json");
+const fs = require("fs");
+
 const COLS = 48;
 const ROWS = 24;
+const MAX_DEPTH = 5;
 const EPS = 1e-6;
+
+const geojson = require("./dist/combined.json");
 
 
 function box_overlap(feature, min_lat, min_lon, max_lat, max_lon) {
@@ -143,7 +147,7 @@ function tile(candidates, min_lat, min_lon, max_lat, max_lon, depth) {
   // Maximum recursion: use whichever zone is best.
   // FIXME: Maximum recursion depth should depend on whether this location is
   // urban or rural.
-  if(depth === 4) {
+  if(depth === MAX_DEPTH) {
     return subset[0][0].properties.tzid;
   }
 
@@ -185,7 +189,7 @@ function tile(candidates, min_lat, min_lon, max_lat, max_lon, depth) {
 
 
 // Make the geojson file consistent.
-for(const feature of GEOJSON.features) {
+for(const feature of geojson.features) {
   // Ensure all features are MultiPolygons.
   switch(feature.geometry.type) {
     case "MultiPolygon":
@@ -245,7 +249,7 @@ for(let row = 0; row < ROWS; row++) {
 
     // Determine which timezones potentially overlap this tile.
     const candidates = [];
-    for(const feature of GEOJSON.features) {
+    for(const feature of geojson.features) {
       if(box_overlap(feature, min_lat, min_lon, max_lat, max_lon)) {
         candidates.push(feature);
       }
@@ -255,4 +259,69 @@ for(let row = 0; row < ROWS; row++) {
   }
 }
 
-console.log("%s", JSON.stringify(root, null, 2));
+// Generate list of timezones.
+const tz_set = new Set();
+function add(node) {
+  if(Array.isArray(node)) {
+    node.forEach(add);
+  }
+  else {
+    tz_set.add(node);
+  }
+}
+add(root);
+
+const tz_list = Array.from(tz_set);
+tz_list.sort();
+
+// Pack tree into a string.
+function pack(root) {
+  const list = [];
+
+  for(const queue = [root]; queue.length; ) {
+    const node = queue.shift();
+
+    node.index = list.length;
+    list.push(node);
+
+    for(let i = 0; i < node.length; i++) {
+      if(Array.isArray(node[i])) {
+        queue.push(node[i]);
+      }
+      else {
+        node[i] = tz_list.indexOf(node[i]);
+      }
+    }
+  }
+
+  let string = "";
+  for(let i = 0; i < list.length; i++) {
+    const a = list[i];
+    for(let j = 0; j < a.length; j++) {
+      const b = a[j];
+
+      let x;
+      if(Array.isArray(b)) {
+        x = b.index - a.index - 1;
+        if(x < 0 || x + tz_list.length >= 3136) {
+          throw new Error("cannot pack in the current format");
+        }
+      }
+      else {
+        x = 3136 - tz_list.length + b;
+      }
+
+      string += String.fromCharCode(Math.floor(x / 56) + 35, (x % 56) + 35);
+    }
+  }
+
+  return string;
+}
+const tz_data = pack(root);
+
+console.log(
+  "%s",
+  fs.readFileSync("tz_template.js", "utf8").
+    replace(/__TZDATA__/, () => JSON.stringify(tz_data)).
+    replace(/__TZLIST__/, () => JSON.stringify(tz_list))
+);
