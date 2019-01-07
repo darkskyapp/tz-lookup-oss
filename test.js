@@ -51,7 +51,7 @@ describe("tzlookup", function() {
   }
 
   [
-    /* These tests are hand-crafted for specific locations. */
+    // These tests are hand-crafted for specific locations.
     [[ 40.7092,  -74.0151], "America/New_York"],
     [[ 42.3668,  -71.0546], "America/New_York"],
     [[ 41.8976,  -87.6205], "America/Chicago"],
@@ -98,6 +98,10 @@ describe("tzlookup", function() {
     [[ 39.6217,  -87.4522], "America/Indiana/Indianapolis"], // #27
     [[ 39.6631,  -87.4307], "America/Indiana/Indianapolis"], // #27
 
+    // Check that we resolve conflicting zones adequately.
+    [[ 43.8250,   87.6000], "Asia/Urumqi"],
+    [[ 25.0667,  121.5167], "Asia/Taipei"],
+
     // Collapse the north pole so that it always returns GMT regardless of the
     // longitude.
     [[90, -180], "Etc/GMT"], // #20
@@ -106,7 +110,7 @@ describe("tzlookup", function() {
     [[90,   90], "Etc/GMT"], // #20
     [[90,  180], "Etc/GMT"], // #20
 
-    /* Sanity-check international waters. */
+    // Sanity-check international waters.
     [[-65, -180], "Etc/GMT+12"],
     [[-65, -165], "Etc/GMT+11"],
     [[-65, -150], "Etc/GMT+10"],
@@ -133,12 +137,12 @@ describe("tzlookup", function() {
     [[-65,  165], "Etc/GMT-11"],
     [[-65,  180], "Etc/GMT-12"],
 
-    /* Strings should be allowed. */
+    // Strings should be allowed.
     [["42.3668",  "-71.0546"], "America/New_York"],
     [["21.4381", "-158.0493"], "Pacific/Honolulu"],
 
-    /* These are automatically-generated test-cases just so I can be
-     * confident when I change the data storage format all around. */
+    // These are automatically-generated test-cases just so I can be
+    // confident when I change the data storage format all around.
     [[ 37.8358,  -89.0556], "America/Chicago"],
     [[-29.3372,  -56.9745], "America/Argentina/Cordoba"],
     [[ 82.3141,  -39.1331], "America/Godthab"],
@@ -560,7 +564,7 @@ describe("tzlookup", function() {
     [[ 75.2983,   99.6727], "Asia/Krasnoyarsk"],
   ].forEach(pass);
 
-  /* Sanity-check that bad inputs fail. */
+  // Sanity-check that bad inputs fail.
   [
     [100, 10],
     [10, 190],
