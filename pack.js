@@ -6,54 +6,57 @@ const ROWS = 24;
 const MAX_DEPTH = 5;
 const EPS = 1e-6;
 
-const tz_geojson = require("./dist/combined.json");
+const tz_geojson = require("./dist/combined-with-oceans.json");
+const urban_geojson = require("./ne_10m_urban_areas.json");
 
 
-// Make the geojson file consistent.
-for(const feature of tz_geojson.features) {
-  // Ensure all features are MultiPolygons.
-  switch(feature.geometry.type) {
-    case "MultiPolygon":
-      break;
-    case "Polygon":
-      feature.geometry.type = "MultiPolygon";
-      feature.geometry.coordinates = [feature.geometry.coordinates];
-      break;
-    default:
-      throw new Error("unrecognized type " + type);
-  }
+// Make the geojson files consistent.
+for(const geojson of [tz_geojson, urban_geojson]) {
+  for(const feature of geojson.features) {
+    // Ensure all features are MultiPolygons.
+    switch(feature.geometry.type) {
+      case "MultiPolygon":
+        break;
+      case "Polygon":
+        feature.geometry.type = "MultiPolygon";
+        feature.geometry.coordinates = [feature.geometry.coordinates];
+        break;
+      default:
+        throw new Error("unrecognized type " + type);
+    }
 
-  // geojson includes duplicate vertices at the beginning and end of each
-  // vertex list, so remove them. (This makes some of the algorithms used, like
-  // clipping and the like, simpler.)
-  for(const polygon of feature.geometry.coordinates) {
-    for(const vertices of polygon) {
-      const first = vertices[0];
-      const last = vertices[vertices.length - 1];
-      if(first[0] === last[0] && first[1] === last[1]) {
-        vertices.pop();
+    // geojson includes duplicate vertices at the beginning and end of each
+    // vertex list, so remove them. (This makes some of the algorithms used,
+    // like clipping and the like, simpler.)
+    for(const polygon of feature.geometry.coordinates) {
+      for(const vertices of polygon) {
+        const first = vertices[0];
+        const last = vertices[vertices.length - 1];
+        if(first[0] === last[0] && first[1] === last[1]) {
+          vertices.pop();
+        }
       }
     }
-  }
 
-  // Add properties representing the bounding box of the timezone.
-  let min_lat = 90;
-  let min_lon = 180;
-  let max_lat = -90;
-  let max_lon = -180;
-  for(const [vertices] of feature.geometry.coordinates) {
-    for(const [lon, lat] of vertices) {
-      if(lat < min_lat) { min_lat = lat; }
-      if(lon < min_lon) { min_lon = lon; }
-      if(lat > max_lat) { max_lat = lat; }
-      if(lon > max_lon) { max_lon = lon; }
+    // Add properties representing the bounding box of the timezone.
+    let min_lat = 90;
+    let min_lon = 180;
+    let max_lat = -90;
+    let max_lon = -180;
+    for(const [vertices] of feature.geometry.coordinates) {
+      for(const [lon, lat] of vertices) {
+        if(lat < min_lat) { min_lat = lat; }
+        if(lon < min_lon) { min_lon = lon; }
+        if(lat > max_lat) { max_lat = lat; }
+        if(lon > max_lon) { max_lon = lon; }
+      }
     }
-  }
 
-  feature.properties.min_lat = min_lat;
-  feature.properties.min_lon = min_lon;
-  feature.properties.max_lat = max_lat;
-  feature.properties.max_lon = max_lon;
+    feature.properties.min_lat = min_lat;
+    feature.properties.min_lon = min_lon;
+    feature.properties.max_lat = max_lat;
+    feature.properties.max_lon = max_lon;
+  }
 }
 
 
@@ -147,13 +150,6 @@ function polygon_overlap(feature, min_lat, min_lon, max_lat, max_lon) {
   return total / ((max_lat - min_lat) * (max_lon - min_lon));
 }
 
-function maritime_zone(lon) {
-  const x = Math.round(12 - (lon + 180) / 15);
-  if(x > 0) { return "Etc/GMT+" + x; }
-  if(x < 0) { return "Etc/GMT" + x; }
-  return "Etc/GMT";
-}
-
 function by_coverage_and_tzid([a, a_coverage], [b, b_coverage]) {
   const order = b_coverage - a_coverage;
   if(order !== 0) { return order; }
@@ -162,6 +158,12 @@ function by_coverage_and_tzid([a, a_coverage], [b, b_coverage]) {
 }
 
 function contains_city(min_lat, min_lon, max_lat, max_lon) {
+  for(const feature of urban_geojson.features) {
+    if(box_overlap(feature, min_lat, min_lon, max_lat, max_lon) &&
+       polygon_overlap(feature, min_lat, min_lon, max_lat, max_lon) >= EPS) {
+      return true;
+    }
+  }
   return false;
 }
 
@@ -179,9 +181,9 @@ function tile(candidates, min_lat, min_lon, max_lat, max_lon, depth) {
   }
   subset.sort(by_coverage_and_tzid);
 
-  // No coverage means use maritime zone.
+  // No coverage should not happen?
   if(subset.length === 0) {
-    return maritime_zone(mid_lon);
+    throw new Error("no zones cover an area?");
   }
 
   // One zone means use it.
@@ -227,7 +229,9 @@ function tile(candidates, min_lat, min_lon, max_lat, max_lon, depth) {
      !Array.isArray(children[3])) {
     const clean_children = children.filter(x => !x.startsWith("Etc/"));
     if(clean_children.length === 0) {
-      return maritime_zone(mid_lon);
+      // FIXME: We assume that one exists and they're all the same, which they
+      // _should_ be, but...
+      return children.filter(x => x.startsWith("Etc/"))[0];
     }
 
     let all_equal = true;

@@ -16,7 +16,7 @@ function tzlookup(lat, lon) {
 
   // Special case the north pole.
   if(lat >= 90) {
-    return TZLIST[TZLIST.length - 13];
+    return "Etc/GMT";
   }
 
   // The tree is essentially a quadtree, but with a very large root node.
