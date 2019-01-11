@@ -3,7 +3,7 @@ const fs = require("fs");
 
 const COLS = 48;
 const ROWS = 24;
-const MAX_DEPTH = 10;
+const MAX_DEPTH = 9;
 const EPS = 1e-6;
 const URBAN_HACK_RADIUS = 720/49152;
 
