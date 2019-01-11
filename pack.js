@@ -213,6 +213,26 @@ function contains_city(min_lat, min_lon, max_lat, max_lon) {
   return false;
 }
 
+// If a particular place is covered by multiple, overlapping timezones, then we
+// need to pick one. This is a fraught thing to do, but unfortunately necessary
+// for the moment for technical reasons. See #34.
+function multi(a, b) {
+  // HACK: Favor Asia/Urumqi over Asia/Shanghai in order to capture the nuance
+  // of the situation.
+  if(a === "Asia/Shanghai" && b === "Asia/Urumqi") { return b; }
+
+  // HACK: Favor Asia/Hebron over Asia/Jerusalem in order to capture the nuance
+  // of the situation.
+  if(a === "Asia/Hebron" && b === "Asia/Jerusalem") { return a; }
+
+  // HACK: Eh. I have no sense of whether either of these matter, and neither
+  // way compresses better, so...
+  if(a === "Europe/Amsterdam" && b === "Europe/Berlin") { return a; }
+
+  // I don't know what to do with this. :X
+  throw new Error("don't know how to disambiguate " + a + " and " + b);
+}
+
 function tile(candidates, min_lat, min_lon, max_lat, max_lon, depth) {
   const mid_lat = min_lat + (max_lat - min_lat) / 2;
   const mid_lon = min_lon + (max_lon - min_lon) / 2;
@@ -241,7 +261,7 @@ function tile(candidates, min_lat, min_lon, max_lat, max_lon, depth) {
   // NOTE: We assume that never more that two zones overlap. Presently (as of
   // 2018i) this is the case, but...
   if(subset[1][1] > 1 - EPS) {
-    return subset[0][0].properties.tzid + " " + subset[1][0].properties.tzid;
+    return multi(subset[0][0].properties.tzid, subset[1][0].properties.tzid);
   }
   if(subset[0][1] > 1 - EPS) {
     return subset[0][0].properties.tzid;
@@ -252,7 +272,7 @@ function tile(candidates, min_lat, min_lon, max_lat, max_lon, depth) {
     // NOTE: We assume that never more that two zones overlap. Presently (as of
     // 2018i) this is the case, but...
     if(Math.abs(subset[0][1] - subset[1][1]) < EPS) {
-      return subset[0][0].properties.tzid + " " + subset[1][0].properties.tzid;
+      return multi(subset[0][0].properties.tzid, subset[1][0].properties.tzid);
     }
     return subset[0][0].properties.tzid;
   }
