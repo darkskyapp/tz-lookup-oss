@@ -3,8 +3,9 @@ const fs = require("fs");
 
 const COLS = 48;
 const ROWS = 24;
-const MAX_DEPTH = 5;
+const MAX_DEPTH = 10;
 const EPS = 1e-6;
+const URBAN_HACK_RADIUS = 720/49152;
 
 const tz_geojson = require("./dist/combined-with-oceans.json");
 const urban_geojson = require("./ne_10m_urban_areas.json");
@@ -57,6 +58,44 @@ for(const geojson of [tz_geojson, urban_geojson]) {
     feature.properties.max_lat = max_lat;
     feature.properties.max_lon = max_lon;
   }
+}
+
+
+// HACK: Add custom urban areas in order to fix reported errors.
+for(const [lat, lon] of [
+  [36.8381,  -84.8500],
+  [37.9643,  -86.7453],
+  [36.9147, -111.4558], // fix #7
+  [44.9280,  -87.1853], // fix #13
+  [50.7029,  -57.3511], // fix #13
+  [29.9414,  -85.4064], // fix #14
+  [49.7261,   -1.9104], // fix #15
+  [65.5280,   23.5570], // fix #16
+  [35.8722,  -84.5250], // fix #18
+  [60.0961,   18.7970], // fix #23
+  [59.9942,   18.7794], // fix #23
+  [59.0500,   15.0412], // fix #23
+  [60.0270,   18.7594], // fix #23
+  [60.0779,   18.8102], // fix #23
+  [60.0239,   18.7625], // fix #23
+  [59.9983,   18.8548], // fix #23
+  [37.3458,  -85.3456], // fix #24
+  [46.4547,  -90.1711], // fix #25
+  [46.4814,  -90.0531], // fix #25
+  [46.4753,  -89.9400], // fix #25
+  [46.3661,  -89.5969], // fix #25
+  [46.2678,  -89.1781], // fix #25
+  [39.6217,  -87.4522], // fix #27
+  [39.6631,  -87.4307], // fix #27
+]) {
+  urban_geojson.features.push({
+    properties: {
+      min_lat: lat - URBAN_HACK_RADIUS,
+      min_lon: lon - URBAN_HACK_RADIUS,
+      max_lat: lat + URBAN_HACK_RADIUS,
+      max_lon: lon + URBAN_HACK_RADIUS,
+    },
+  });
 }
 
 
@@ -159,8 +198,15 @@ function by_coverage_and_tzid([a, a_coverage], [b, b_coverage]) {
 
 function contains_city(min_lat, min_lon, max_lat, max_lon) {
   for(const feature of urban_geojson.features) {
-    if(box_overlap(feature, min_lat, min_lon, max_lat, max_lon) &&
-       polygon_overlap(feature, min_lat, min_lon, max_lat, max_lon) >= EPS) {
+    if(
+      box_overlap(feature, min_lat, min_lon, max_lat, max_lon) &&
+      (
+        // HACK: If there's no geometry, it's OK: these were manually added
+        // box-shaped zones and we don't want or need the polygon.
+        feature.geometry === undefined ||
+        polygon_overlap(feature, min_lat, min_lon, max_lat, max_lon) >= EPS
+      )
+    ) {
       return true;
     }
   }
@@ -215,10 +261,10 @@ function tile(candidates, min_lat, min_lon, max_lat, max_lon, depth) {
   const subset_candidates = subset.map(x => x[0]);
   const child_depth = depth + 1;
   const children = [
-    tile(subset_candidates, min_lat, min_lon, mid_lat, mid_lon, child_depth),
-    tile(subset_candidates, min_lat, mid_lon, mid_lat, max_lon, child_depth),
     tile(subset_candidates, mid_lat, min_lon, max_lat, mid_lon, child_depth),
     tile(subset_candidates, mid_lat, mid_lon, max_lat, max_lon, child_depth),
+    tile(subset_candidates, min_lat, min_lon, mid_lat, mid_lon, child_depth),
+    tile(subset_candidates, min_lat, mid_lon, mid_lat, max_lon, child_depth),
   ];
 
   // If all the children are leaves, and they're either identical or a maritime
