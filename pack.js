@@ -3,11 +3,11 @@ const fs = require("fs");
 
 const COLS = 48;
 const ROWS = 24;
-const MAX_DEPTH = 9;
+const MAX_DEPTH = 10;
 const EPS = 1e-6;
 const URBAN_HACK_RADIUS = 720/49152;
 
-const tz_geojson = require("./dist/combined-with-oceans.json");
+const tz_geojson = require("./dist/combined.json");
 const urban_geojson = require("./ne_10m_urban_areas.json");
 
 
@@ -213,27 +213,14 @@ function contains_city(min_lat, min_lon, max_lat, max_lon) {
   return false;
 }
 
-// If a particular place is covered by multiple, overlapping timezones, then we
-// need to pick one. This is a fraught thing to do, but unfortunately necessary
-// for the moment for technical reasons. See #34.
-function multi(a, b) {
-  // HACK: Favor Asia/Urumqi over Asia/Shanghai in order to capture the nuance
-  // of the situation.
-  if(a === "Asia/Shanghai" && b === "Asia/Urumqi") { return b; }
-
-  // HACK: Favor Asia/Hebron over Asia/Jerusalem in order to capture the nuance
-  // of the situation.
-  if(a === "Asia/Hebron" && b === "Asia/Jerusalem") { return a; }
-
-  // HACK: Eh. I have no sense of whether either of these matter, and neither
-  // way compresses better, so...
-  if(a === "Europe/Amsterdam" && b === "Europe/Berlin") { return a; }
-
-  // I don't know what to do with this. :X
-  throw new Error("don't know how to disambiguate " + a + " and " + b);
+function maritime_zone(lon) {
+  const x = Math.round(12 - (lon + 180) / 15);
+  if(x > 0) { return "Etc/GMT+" + x; }
+  if(x < 0) { return "Etc/GMT" + x; }
+  return "Etc/GMT";
 }
 
-function tile(candidates, min_lat, min_lon, max_lat, max_lon, depth) {
+function tile(candidates, etc_tzid, min_lat, min_lon, max_lat, max_lon, depth) {
   const mid_lat = min_lat + (max_lat - min_lat) / 2;
   const mid_lon = min_lon + (max_lon - min_lon) / 2;
 
@@ -243,13 +230,13 @@ function tile(candidates, min_lat, min_lon, max_lat, max_lon, depth) {
     if(overlap < EPS) {
       continue;
     }
+
     subset.push([candidate, overlap]);
   }
-  subset.sort(by_coverage_and_tzid);
 
   // No coverage should not happen?
   if(subset.length === 0) {
-    throw new Error("no zones cover an area?");
+    return etc_tzid;
   }
 
   // One zone means use it.
@@ -257,34 +244,53 @@ function tile(candidates, min_lat, min_lon, max_lat, max_lon, depth) {
     return subset[0][0].properties.tzid;
   }
 
-  // All zones have max coverage.
-  // NOTE: We assume that never more that two zones overlap. Presently (as of
-  // 2018i) this is the case, but...
-  if(subset[1][1] > 1 - EPS) {
-    return multi(subset[0][0].properties.tzid, subset[1][0].properties.tzid);
-  }
-  if(subset[0][1] > 1 - EPS) {
-    return subset[0][0].properties.tzid;
-  }
+  subset.sort(by_coverage_and_tzid);
 
-  // Maximum recursion *OR* rural: use whichever zone is best.
-  if(depth === MAX_DEPTH || !contains_city(min_lat, min_lon, max_lat, max_lon)) {
-    // NOTE: We assume that never more that two zones overlap. Presently (as of
-    // 2018i) this is the case, but...
-    if(Math.abs(subset[0][1] - subset[1][1]) < EPS) {
-      return multi(subset[0][0].properties.tzid, subset[1][0].properties.tzid);
+  // If the first zone has max coverage OR we hit the maximum recursion depth
+  // OR this is a rural area that doesn't matter, then we're going to return a
+  // leaf node rather than recurse further.
+  if(
+    subset[0][1] > 1 - EPS ||
+    depth === MAX_DEPTH ||
+    !contains_city(min_lat, min_lon, max_lat, max_lon)
+  ) {
+    const a = subset[0][0].properties.tzid;
+
+    // If the second zone in the list has nearly the same coverage level as the
+    // first, then sort out how to favor one over the other.
+    // NOTE: We assume that no more than two zones ever conflict! This is true
+    // as of 2018i, but...
+    if(subset[0][1] - subset[1][1] < EPS) {
+      const b = subset[1][0].properties.tzid;
+
+      // Xinjiang conflict. We select Asia/Urumqi in order to make it clear
+      // that there is, in fact, a conflict.
+      if(a === "Asia/Shanghai" && b === "Asia/Urumqi") { return b; }
+
+      // Israeli-Palestinian conflict. We select Asia/Hebron in order to make
+      // it clear that there is, in fact, a conflict.
+      if(a === "Asia/Hebron" && b === "Asia/Jerusalem") { return a; }
+
+      // These are just conflicts that occur due to the resolution of our data.
+      // Resolve them arbitrarily and we'll tweak it if anyone complains.
+      if(a === "Europe/Amsterdam" && b === "Europe/Berlin") { return a; }
+      if(a === "Australia/Sydney" && b === "Australia/Melbourne") { return a; }
+
+      throw new Error("unresolved zone conflict: " + a + " vs " + b);
     }
-    return subset[0][0].properties.tzid;
+
+    // Otherwise, we just care about the top zone.
+    return a;
   }
 
   // No easy way to pick a timezone for this tile. Recurse!
   const subset_candidates = subset.map(x => x[0]);
   const child_depth = depth + 1;
   const children = [
-    tile(subset_candidates, mid_lat, min_lon, max_lat, mid_lon, child_depth),
-    tile(subset_candidates, mid_lat, mid_lon, max_lat, max_lon, child_depth),
-    tile(subset_candidates, min_lat, min_lon, mid_lat, mid_lon, child_depth),
-    tile(subset_candidates, min_lat, mid_lon, mid_lat, max_lon, child_depth),
+    tile(subset_candidates, etc_tzid, mid_lat, min_lon, max_lat, mid_lon, child_depth),
+    tile(subset_candidates, etc_tzid, mid_lat, mid_lon, max_lat, max_lon, child_depth),
+    tile(subset_candidates, etc_tzid, min_lat, min_lon, mid_lat, mid_lon, child_depth),
+    tile(subset_candidates, etc_tzid, min_lat, mid_lon, mid_lat, max_lon, child_depth),
   ];
 
   // If all the children are leaves, and they're either identical or a maritime
@@ -293,12 +299,8 @@ function tile(candidates, min_lat, min_lon, max_lat, max_lon, depth) {
      !Array.isArray(children[1]) &&
      !Array.isArray(children[2]) &&
      !Array.isArray(children[3])) {
-    const clean_children = children.filter(x => !x.startsWith("Etc/"));
-    if(clean_children.length === 0) {
-      // FIXME: We assume that one exists and they're all the same, which they
-      // _should_ be, but...
-      return children.filter(x => x.startsWith("Etc/"))[0];
-    }
+    const clean_children = children.filter(x => x !== etc_tzid);
+    if(clean_children.length === 0) { return etc_tzid; }
 
     let all_equal = true;
     for(let i = 1; i < clean_children.length; i++) {
@@ -324,6 +326,7 @@ for(let row = 0; row < ROWS; row++) {
   for(let col = 0; col < COLS; col++) {
     const min_lon = -180 + (col + 0) * 360 / COLS;
     const max_lon = -180 + (col + 1) * 360 / COLS;
+    const etc_tzid = maritime_zone(min_lon + (max_lon - min_lon) / 2);
 
     // Determine which timezones potentially overlap this tile.
     const candidates = [];
@@ -333,7 +336,15 @@ for(let row = 0; row < ROWS; row++) {
       }
     }
 
-    root[row * COLS + col] = tile(candidates, min_lat, min_lon, max_lat, max_lon, 1);
+    root[row * COLS + col] = tile(
+      candidates,
+      etc_tzid,
+      min_lat,
+      min_lon,
+      max_lat,
+      max_lon,
+      1
+    );
   }
 }
 
