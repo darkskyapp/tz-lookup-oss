@@ -5,6 +5,8 @@ const COLS = 48;
 const ROWS = 24;
 const MAX_DEPTH = 10;
 const EPS = 1e-6;
+// NOTE: This value (~0.01°) is arbitrary and ported from a prior version. It
+// could easily be tuned smaller or larger if appropriate.
 const URBAN_HACK_RADIUS = 720/49152;
 
 const tz_geojson = require("./dist/combined.json");
@@ -65,6 +67,7 @@ for(const geojson of [tz_geojson, urban_geojson]) {
 for(const [lat, lon] of [
   [36.8381,  -84.8500],
   [37.9643,  -86.7453],
+  [58.3168, -134.4397],
   [36.9147, -111.4558], // fix #7
   [44.9280,  -87.1853], // fix #13
   [50.7029,  -57.3511], // fix #13
