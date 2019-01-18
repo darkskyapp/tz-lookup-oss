@@ -3,8 +3,9 @@ const fs = require("fs");
 
 const COLS = 48;
 const ROWS = 24;
-const MAX_DEPTH = 10;
-const EPS = 1e-6;
+const MIN_DEPTH = 3; // Minimum recursion depth to allow lossy compression.
+const MAX_DEPTH = 10; // Maximum recursion depth (forcing lossy compression).
+const EPS = 1e-6; // Epsilon value for floating-point equality checks.
 // NOTE: This value (~0.01°) is arbitrary and ported from a prior version. It
 // could easily be tuned smaller or larger if appropriate.
 const URBAN_HACK_RADIUS = 720/49152;
@@ -254,8 +255,8 @@ function tile(candidates, etc_tzid, min_lat, min_lon, max_lat, max_lon, depth) {
   // leaf node rather than recurse further.
   if(
     subset[0][1] > 1 - EPS ||
-    depth === MAX_DEPTH ||
-    !contains_city(min_lat, min_lon, max_lat, max_lon)
+    depth >= MAX_DEPTH ||
+    (depth >= MIN_DEPTH && !contains_city(min_lat, min_lon, max_lat, max_lon))
   ) {
     const a = subset[0][0].properties.tzid;
 
@@ -273,6 +274,10 @@ function tile(candidates, etc_tzid, min_lat, min_lon, max_lat, max_lon, depth) {
       // Israeli-Palestinian conflict. We select Asia/Hebron in order to make
       // it clear that there is, in fact, a conflict.
       if(a === "Asia/Hebron" && b === "Asia/Jerusalem") { return a; }
+
+      // Sudan-South Sudan conflict. We select Africa/Khartoum arbitrarily and
+      // will tweak it if anyone complains.
+      if(a === "Africa/Juba" && b === "Africa/Khartoum") { return b; }
 
       // These are just conflicts that occur due to the resolution of our data.
       // Resolve them arbitrarily and we'll tweak it if anyone complains.
