@@ -91,6 +91,7 @@ for(const [lat, lon] of [
   [46.2678,  -89.1781], // fix #25
   [39.6217,  -87.4522], // fix #27
   [39.6631,  -87.4307], // fix #27
+  [61.7132,   29.3968], // fox #36
 ]) {
   urban_geojson.features.push({
     properties: {
