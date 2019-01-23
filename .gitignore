@@ -1,3 +1,4 @@
 /dist
+/ne_10m_urban_areas.*
 /node_modules
-/timezones-with-oceans.geojson.zip
+/timezones.geojson.zip
