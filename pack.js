@@ -1,166 +1,380 @@
 "use strict";
-const width = 49152;
-const height = 24576;
 const fs = require("fs");
-const index = require("./tz.json");
 
-function read(pathname, offset, buffer) {
-  const fd = fs.openSync(pathname, "r");
-  const n = fs.readSync(fd, buffer, 0, buffer.length, offset);
-  if(n !== buffer.length) {
-    throw new Error("unable to read " + buffer.length + " bytes from " + pathname);
-  }
-  fs.closeSync(fd);
-}
+const COLS = 48;
+const ROWS = 24;
+const MIN_DEPTH = 3; // Minimum recursion depth to allow lossy compression.
+const MAX_DEPTH = 10; // Maximum recursion depth (forcing lossy compression).
+const EPS = 1e-6; // Epsilon value for floating-point equality checks.
+// NOTE: This value (~0.01°) is arbitrary and ported from a prior version. It
+// could easily be tuned smaller or larger if appropriate.
+const URBAN_HACK_RADIUS = 720/49152;
 
-function constrain(x, min, max) {
-  return Math.min(Math.max(x, min), max);
-}
+const tz_geojson = require("./dist/combined.json");
+const urban_geojson = require("./ne_10m_urban_areas.json");
 
-function force_urban(lat, lon, buffer) {
-  const x = (180 + lon) * width  / 360.00000000000006,
-        y = ( 90 - lat) * height / 180.00000000000003,
-        r = 2,
-        min_x = constrain(Math.floor(x - r    ), 0, width ),
-        min_y = constrain(Math.floor(y - r    ), 0, height),
-        max_x = constrain(Math.floor(x + r + 1), 0, width ),
-        max_y = constrain(Math.floor(y + r + 1), 0, height);
-  for(let v = min_y; v < max_y; v++) {
-    for(let u = min_x; u < max_x; u++) {
-      const dx = u - x,
-            dy = v - y;
-      if(dx * dx + dy * dy > r * r) {
-        continue;
-      }
 
-      const i = v * width + u;
-      buffer[i >> 3] &= (~(1 << (i & 7))) & 255;
-    }
-  }
-}
-
-function fine(urban_data, urban_x, urban_y, tz_data, tz_x, tz_y, size) {
-  const tz_width = width / 4;
-  const tz_height = height / 4;
-
-  /* Generate a histogram of the relative frequency of timezones in the tile. */
-  const map = new Map();
-  for(let v = 0; v < size; v++) {
-    for(let u = 0; u < size; u++) {
-      const key = tz_data.readUInt16BE(((tz_y + v) * tz_width + (tz_x + u)) * 2) - 1;
-      if(key === -1) {
-        continue;
-      }
-      if(!map.has(key)) {
-        map.set(key, 0);
-      }
-      map.set(key, map.get(key) + 1);
-    }
-  }
-
-  /* No explicit timezones means use international timezones. (These are the
-   * last 25 in the index.) */
-  if(map.size === 0) {
-    return index.length + Math.round((urban_x + size / 2) * 24 / width) - 25;
-  }
-
-  /* Only one timezone means, let's use it. (Note that this also handles the
-   * "we recursed all the way down to a single pixel" case, so there's no need
-   * for explicitly handling that case.) */
-  if(map.size === 1) {
-    return Array.from(map.keys())[0];
-  }
-
-  /* Check and see if this tile has any urban centers. If not, it's probably
-   * not worth recursing on, so early out with the most common timezone in the
-   * tile if it covers a majority of it. */
-  let important = false;
-  for(let v = 0; v < size; v++) {
-    for(let u = 0; u < size; u++) {
-      const i = (urban_y + v) * width + (urban_x + u);
-      if(((urban_data[i >> 3] >> (i & 7)) & 1) === 0) {
-        important = true;
+// Make the geojson files consistent.
+for(const geojson of [tz_geojson, urban_geojson]) {
+  for(const feature of geojson.features) {
+    // Ensure all features are MultiPolygons.
+    switch(feature.geometry.type) {
+      case "MultiPolygon":
         break;
-      }
+      case "Polygon":
+        feature.geometry.type = "MultiPolygon";
+        feature.geometry.coordinates = [feature.geometry.coordinates];
+        break;
+      default:
+        throw new Error("unrecognized type " + type);
     }
-  }
-  if(!important) {
-    return Array.from(map).sort((a, b) => b[1] - a[1])[0][0];
-  }
 
-  /* Otherwise, recurse down. */
-  const half = size / 2;
-  return [
-    fine(urban_data, urban_x, urban_y, tz_data, tz_x, tz_y, half),
-    fine(urban_data, urban_x + half, urban_y, tz_data, tz_x + half, tz_y, half),
-    fine(urban_data, urban_x, urban_y + half, tz_data, tz_x, tz_y + half, half),
-    fine(urban_data, urban_x + half, urban_y + half, tz_data, tz_x + half, tz_y + half, half),
-  ];
-}
-
-function coarse() {
-  const root = new Array(48 * 24);
-  const size = width / 48;
-
-  /* Blanket urban coverage data from MODIS. */
-  const urban_data = Buffer.allocUnsafe(width * height / 8);
-  read("ne_10m_urban_areas.pbm", 15, urban_data);
-
-  /* Plus automatically block out cities. */
-  const cities = require("./ne_10m_populated_places_simple.json");
-  for(let feature of cities.features) {
-    const geometry = feature.geometry;
-    if(geometry && geometry.type === "Point") {
-      force_urban(geometry.coordinates[1], geometry.coordinates[0], urban_data);
-    }
-  }
-
-  // Manually fix specific resolution problem locations.
-  force_urban(36.8381,  -84.8500, urban_data);
-  force_urban(37.9643,  -86.7453, urban_data);
-  force_urban(36.9147, -111.4558, urban_data); // fix #7
-  force_urban(44.9280,  -87.1853, urban_data); // fix #13
-  force_urban(50.7029,  -57.3511, urban_data); // fix #13
-  force_urban(29.9414,  -85.4064, urban_data); // fix #14
-  force_urban(49.7261,   -1.9104, urban_data); // fix #15
-  force_urban(65.5280,   23.5570, urban_data); // fix #16
-  force_urban(35.8722,  -84.5250, urban_data); // fix #18
-  force_urban(60.0961,   18.7970, urban_data); // fix #23
-  force_urban(59.9942,   18.7794, urban_data); // fix #23
-  force_urban(59.0500,   15.0412, urban_data); // fix #23
-  force_urban(60.0270,   18.7594, urban_data); // fix #23
-  force_urban(60.0779,   18.8102, urban_data); // fix #23
-  force_urban(60.0239,   18.7625, urban_data); // fix #23
-  force_urban(59.9983,   18.8548, urban_data); // fix #23
-  force_urban(37.3458,  -85.3456, urban_data); // fix #24
-  force_urban(46.4547,  -90.1711, urban_data); // fix #25
-  force_urban(46.4814,  -90.0531, urban_data); // fix #25
-  force_urban(46.4753,  -89.9400, urban_data); // fix #25
-  force_urban(46.3661,  -89.5969, urban_data); // fix #25
-  force_urban(46.2678,  -89.1781, urban_data); // fix #25
-  force_urban(39.6217,  -87.4522, urban_data); // fix #27
-  force_urban(39.6631,  -87.4307, urban_data); // fix #27
-
-  const tz_data = Buffer.allocUnsafe((width / 4) * (height / 2) * 2);
-  for(let y = 0; y < 2; y++) {
-    for(let x = 0; x < 4; x++) {
-      read("tz_" + (y * 4 + x + 10).toString(36) + ".pgm", 21, tz_data);
-
-      for(let v = 0; v < 12; v++) {
-        for(let u = 0; u < 12; u++) {
-          root[(y * 12 + v) * 48 + (x * 12 + u)] = fine(
-            urban_data, (x * 12 + u) * size, (y * 12 + v) * size,
-            tz_data, u * size, v * size,
-            size
-          );
+    // geojson includes duplicate vertices at the beginning and end of each
+    // vertex list, so remove them. (This makes some of the algorithms used,
+    // like clipping and the like, simpler.)
+    for(const polygon of feature.geometry.coordinates) {
+      for(const vertices of polygon) {
+        const first = vertices[0];
+        const last = vertices[vertices.length - 1];
+        if(first[0] === last[0] && first[1] === last[1]) {
+          vertices.pop();
         }
       }
     }
-  }
 
-  return root;
+    // Add properties representing the bounding box of the timezone.
+    let min_lat = 90;
+    let min_lon = 180;
+    let max_lat = -90;
+    let max_lon = -180;
+    for(const [vertices] of feature.geometry.coordinates) {
+      for(const [lon, lat] of vertices) {
+        if(lat < min_lat) { min_lat = lat; }
+        if(lon < min_lon) { min_lon = lon; }
+        if(lat > max_lat) { max_lat = lat; }
+        if(lon > max_lon) { max_lon = lon; }
+      }
+    }
+
+    feature.properties.min_lat = min_lat;
+    feature.properties.min_lon = min_lon;
+    feature.properties.max_lat = max_lat;
+    feature.properties.max_lon = max_lon;
+  }
 }
 
+
+// HACK: Add custom urban areas in order to fix reported errors.
+for(const [lat, lon] of [
+  [36.8381,  -84.8500],
+  [37.9643,  -86.7453],
+  [58.3168, -134.4397],
+  [36.9147, -111.4558], // fix #7
+  [44.9280,  -87.1853], // fix #13
+  [50.7029,  -57.3511], // fix #13
+  [29.9414,  -85.4064], // fix #14
+  [49.7261,   -1.9104], // fix #15
+  [65.5280,   23.5570], // fix #16
+  [35.8722,  -84.5250], // fix #18
+  [60.0961,   18.7970], // fix #23
+  [59.9942,   18.7794], // fix #23
+  [59.0500,   15.0412], // fix #23
+  [60.0270,   18.7594], // fix #23
+  [60.0779,   18.8102], // fix #23
+  [60.0239,   18.7625], // fix #23
+  [59.9983,   18.8548], // fix #23
+  [37.3458,  -85.3456], // fix #24
+  [46.4547,  -90.1711], // fix #25
+  [46.4814,  -90.0531], // fix #25
+  [46.4753,  -89.9400], // fix #25
+  [46.3661,  -89.5969], // fix #25
+  [46.2678,  -89.1781], // fix #25
+  [39.6217,  -87.4522], // fix #27
+  [39.6631,  -87.4307], // fix #27
+  [61.7132,   29.3968], // fox #36
+]) {
+  urban_geojson.features.push({
+    properties: {
+      min_lat: lat - URBAN_HACK_RADIUS,
+      min_lon: lon - URBAN_HACK_RADIUS,
+      max_lat: lat + URBAN_HACK_RADIUS,
+      max_lon: lon + URBAN_HACK_RADIUS,
+    },
+  });
+}
+
+
+// Build up a tree representing a raster version of the timezone map.
+function box_overlap(feature, min_lat, min_lon, max_lat, max_lon) {
+  return min_lat <= feature.properties.max_lat &&
+         min_lon <= feature.properties.max_lon &&
+         max_lat >= feature.properties.min_lat &&
+         max_lon >= feature.properties.min_lon;
+}
+
+function clip(polygon, min_lat, min_lon, max_lat, max_lon) {
+  const p = Array.from(polygon);
+  const q = [];
+  let b;
+
+  b = p[p.length - 1];
+  for(let i = 0; i < p.length; i++) {
+    const a = b;
+    b = p[i];
+    if((a[0] >= min_lon) !== (b[0] >= min_lon)) {
+      q.push([min_lon, a[1] + (b[1] - a[1]) * (min_lon - a[0]) / (b[0] - a[0])]);
+    }
+    if(b[0] >= min_lon) {
+      q.push(b);
+    }
+  }
+
+  p.length = 0;
+  b = q[q.length - 1];
+  for(let i = 0; i < q.length; i++) {
+    const a = b;
+    b = q[i];
+    if((a[1] >= min_lat) !== (b[1] >= min_lat)) {
+      p.push([a[0] + (b[0] - a[0]) * (min_lat - a[1]) / (b[1] - a[1]), min_lat]);
+    }
+    if(b[1] >= min_lat) {
+      p.push(b);
+    }
+  }
+
+  q.length = 0;
+  b = p[p.length - 1];
+  for(let i = 0; i < p.length; i++) {
+    const a = b;
+    b = p[i];
+    if((a[0] <= max_lon) !== (b[0] <= max_lon)) {
+      q.push([max_lon, a[1] + (b[1] - a[1]) * (max_lon - a[0]) / (b[0] - a[0])]);
+    }
+    if(b[0] <= max_lon) {
+      q.push(b);
+    }
+  }
+
+  p.length = 0;
+  b = q[q.length - 1];
+  for(let i = 0; i < q.length; i++) {
+    const a = b;
+    b = q[i];
+    if((a[1] <= max_lat) !== (b[1] <= max_lat)) {
+      p.push([a[0] + (b[0] - a[0]) * (max_lat - a[1]) / (b[1] - a[1]), max_lat]);
+    }
+    if(b[1] <= max_lat) {
+      p.push(b);
+    }
+  }
+
+  return p;
+}
+
+function area(polygon) {
+  let sum = 0;
+  let b = polygon[polygon.length - 1];
+  for(let i = 0; i < polygon.length; i++) {
+    const a = b;
+    b = polygon[i];
+    sum += a[0] * b[1] - a[1] * b[0];
+  }
+  return Math.abs(sum * 0.5);
+}
+
+function polygon_overlap(feature, min_lat, min_lon, max_lat, max_lon) {
+  let total = 0;
+  for(const polygon of feature.geometry.coordinates) {
+    total += area(clip(polygon[0], min_lat, min_lon, max_lat, max_lon));
+    for(let i = 1; i < polygon.length; i++) {
+      total -= area(clip(polygon[i], min_lat, min_lon, max_lat, max_lon));
+    }
+  }
+
+  return total / ((max_lat - min_lat) * (max_lon - min_lon));
+}
+
+function by_coverage_and_tzid([a, a_coverage], [b, b_coverage]) {
+  const order = b_coverage - a_coverage;
+  if(order !== 0) { return order; }
+
+  return a.properties.tzid.localeCompare(b.properties.tzid);
+}
+
+function contains_city(min_lat, min_lon, max_lat, max_lon) {
+  for(const feature of urban_geojson.features) {
+    if(
+      box_overlap(feature, min_lat, min_lon, max_lat, max_lon) &&
+      (
+        // HACK: If there's no geometry, it's OK: these were manually added
+        // box-shaped zones and we don't want or need the polygon.
+        feature.geometry === undefined ||
+        polygon_overlap(feature, min_lat, min_lon, max_lat, max_lon) >= EPS
+      )
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function maritime_zone(lon) {
+  const x = Math.round(12 - (lon + 180) / 15);
+  if(x > 0) { return "Etc/GMT+" + x; }
+  if(x < 0) { return "Etc/GMT" + x; }
+  return "Etc/GMT";
+}
+
+function tile(candidates, etc_tzid, min_lat, min_lon, max_lat, max_lon, depth) {
+  const mid_lat = min_lat + (max_lat - min_lat) / 2;
+  const mid_lon = min_lon + (max_lon - min_lon) / 2;
+
+  const subset = [];
+  for(const candidate of candidates) {
+    let overlap = polygon_overlap(candidate, min_lat, min_lon, max_lat, max_lon);
+    if(overlap < EPS) {
+      continue;
+    }
+
+    subset.push([candidate, overlap]);
+  }
+
+  // No coverage should not happen?
+  if(subset.length === 0) {
+    return etc_tzid;
+  }
+
+  // One zone means use it.
+  if(subset.length === 1) {
+    return subset[0][0].properties.tzid;
+  }
+
+  subset.sort(by_coverage_and_tzid);
+
+  // If the first zone has max coverage OR we hit the maximum recursion depth
+  // OR this is a rural area that doesn't matter, then we're going to return a
+  // leaf node rather than recurse further.
+  if(
+    subset[0][1] > 1 - EPS ||
+    depth >= MAX_DEPTH ||
+    (depth >= MIN_DEPTH && !contains_city(min_lat, min_lon, max_lat, max_lon))
+  ) {
+    const a = subset[0][0].properties.tzid;
+
+    // If the second zone in the list has nearly the same coverage level as the
+    // first, then sort out how to favor one over the other.
+    // NOTE: We assume that no more than two zones ever conflict! This is true
+    // as of 2018i, but...
+    if(subset[0][1] - subset[1][1] < EPS) {
+      const b = subset[1][0].properties.tzid;
+
+      // Xinjiang conflict. We select Asia/Urumqi in order to make it clear
+      // that there is, in fact, a conflict.
+      if(a === "Asia/Shanghai" && b === "Asia/Urumqi") { return b; }
+
+      // Israeli-Palestinian conflict. We select Asia/Hebron in order to make
+      // it clear that there is, in fact, a conflict.
+      if(a === "Asia/Hebron" && b === "Asia/Jerusalem") { return a; }
+
+      // Sudan-South Sudan conflict. We select Africa/Khartoum arbitrarily and
+      // will tweak it if anyone complains.
+      if(a === "Africa/Juba" && b === "Africa/Khartoum") { return b; }
+
+      // These are just conflicts that occur due to the resolution of our data.
+      // Resolve them arbitrarily and we'll tweak it if anyone complains.
+      if(a === "Europe/Amsterdam" && b === "Europe/Berlin") { return a; }
+      if(a === "Australia/Sydney" && b === "Australia/Melbourne") { return a; }
+
+      throw new Error("unresolved zone conflict: " + a + " vs " + b);
+    }
+
+    // Otherwise, we just care about the top zone.
+    return a;
+  }
+
+  // No easy way to pick a timezone for this tile. Recurse!
+  const subset_candidates = subset.map(x => x[0]);
+  const child_depth = depth + 1;
+  const children = [
+    tile(subset_candidates, etc_tzid, mid_lat, min_lon, max_lat, mid_lon, child_depth),
+    tile(subset_candidates, etc_tzid, mid_lat, mid_lon, max_lat, max_lon, child_depth),
+    tile(subset_candidates, etc_tzid, min_lat, min_lon, mid_lat, mid_lon, child_depth),
+    tile(subset_candidates, etc_tzid, min_lat, mid_lon, mid_lat, max_lon, child_depth),
+  ];
+
+  // If all the children are leaves, and they're either identical or a maritime
+  // zone, then collapse them up into a single node.
+  if(!Array.isArray(children[0]) &&
+     !Array.isArray(children[1]) &&
+     !Array.isArray(children[2]) &&
+     !Array.isArray(children[3])) {
+    const clean_children = children.filter(x => x !== etc_tzid);
+    if(clean_children.length === 0) { return etc_tzid; }
+
+    let all_equal = true;
+    for(let i = 1; i < clean_children.length; i++) {
+      if(clean_children[0] !== clean_children[i]) {
+        all_equal = false;
+        break;
+      }
+    }
+    if(all_equal) {
+      return clean_children[0];
+    }
+  }
+
+  return children;
+}
+
+const root = new Array(COLS * ROWS);
+
+for(let row = 0; row < ROWS; row++) {
+  const min_lat = 90 - (row + 1) * 180 / ROWS;
+  const max_lat = 90 - (row + 0) * 180 / ROWS;
+
+  for(let col = 0; col < COLS; col++) {
+    const min_lon = -180 + (col + 0) * 360 / COLS;
+    const max_lon = -180 + (col + 1) * 360 / COLS;
+    const etc_tzid = maritime_zone(min_lon + (max_lon - min_lon) / 2);
+
+    // Determine which timezones potentially overlap this tile.
+    const candidates = [];
+    for(const feature of tz_geojson.features) {
+      if(box_overlap(feature, min_lat, min_lon, max_lat, max_lon)) {
+        candidates.push(feature);
+      }
+    }
+
+    root[row * COLS + col] = tile(
+      candidates,
+      etc_tzid,
+      min_lat,
+      min_lon,
+      max_lat,
+      max_lon,
+      1
+    );
+  }
+}
+
+// Generate list of timezones.
+const tz_set = new Set();
+
+function add(node) {
+  if(Array.isArray(node)) {
+    node.forEach(add);
+  }
+  else {
+    tz_set.add(node);
+  }
+}
+
+add(root);
+
+const tz_list = Array.from(tz_set);
+tz_list.sort();
+
+// Pack tree into a string.
 function pack(root) {
   const list = [];
 
@@ -174,6 +388,9 @@ function pack(root) {
       if(Array.isArray(node[i])) {
         queue.push(node[i]);
       }
+      else {
+        node[i] = tz_list.indexOf(node[i]);
+      }
     }
   }
 
@@ -186,12 +403,12 @@ function pack(root) {
       let x;
       if(Array.isArray(b)) {
         x = b.index - a.index - 1;
-        if(x < 0 || x + index.length >= 3136) {
+        if(x < 0 || x + tz_list.length >= 3136) {
           throw new Error("cannot pack in the current format");
         }
       }
       else {
-        x = 3136 - index.length + b;
+        x = 3136 - tz_list.length + b;
       }
 
       string += String.fromCharCode(Math.floor(x / 56) + 35, (x % 56) + 35);
@@ -201,9 +418,11 @@ function pack(root) {
   return string;
 }
 
+const tz_data = pack(root);
+
 console.log(
   "%s",
   fs.readFileSync("tz_template.js", "utf8").
-    replace(/__TZDATA__/, () => JSON.stringify(pack(coarse()))).
-    replace(/__TZLIST__/, () => JSON.stringify(index))
+    replace(/__TZDATA__/, () => JSON.stringify(tz_data)).
+    replace(/__TZLIST__/, () => JSON.stringify(tz_list))
 );
