@@ -47,13 +47,20 @@ alert(tzlookup(42.7235, -73.6931)); // alerts "America/New_York"
 
 Sources
 -------
-Versions prior to 6.0.7 used timezone data from Eric Muller's excellent [TZ
-timezone maps][2]. As of 6.0.7, we now use timezone data from @evansiroky's
-also-excellent [timezone-boundary-builder][3]. To regenerate the library,
-simply run `rebuild.sh`. The timezone database was last updated on 11 Apr 2018.
+Timezone data is sourced from Evan Siroky's [timezone-boundary-builder][tbb].
+The database was last updated on 6 Jan 2019.
 
-[2]: http://efele.net/maps/tz/
-[3]: https://github.com/evansiroky/timezone-boundary-builder/
+To regenerate the library's database yourself, you will need to install GDAL:
+
+```
+$ brew install gdal # on Mac OS X
+$ sudo apt install gdal-bin # on Ubuntu
+```
+
+Then, simply execute `rebuild.sh`. Expect it to take 10-30 minutes, depending
+on your network connection and CPU.
+
+[tbb]: https://github.com/evansiroky/timezone-boundary-builder/
 
 License
 -------
