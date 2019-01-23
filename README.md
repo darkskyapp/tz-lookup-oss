@@ -2,7 +2,7 @@ tz-lookup
 =========
 This is a little Javascript library that allows you to look up the time zone of
 a location given its latitude and longitude. It works in both the browser and
-in Node.JS, and is very fast and lightweight (~121KB) given what it does. We
+in Node.JS, and is very fast and lightweight (~71KB) given what it does. We
 use it in production for [The Dark Sky API][1].
 
 [1]: https://darksky.net/dev/
