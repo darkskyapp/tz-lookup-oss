@@ -99,6 +99,7 @@ describe("tzlookup", function() {
     [[ 39.6631,  -87.4307], "America/Indiana/Indianapolis"], // #27
     [[ 61.7132,   29.3968], "Europe/Helsinki"], // #36
     [[ 41.6724,  -86.5082], "America/Indiana/Indianapolis"], // #38
+    [[ 27.9881,   86.9253], "Asia/Shanghai"], // Mount Everest
 
     // Check that we resolve conflicting zones adequately.
     [[ 43.8250,   87.6000], "Asia/Urumqi"],

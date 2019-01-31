@@ -93,6 +93,7 @@ for(const [lat, lon] of [
   [39.6631,  -87.4307], // fix #27
   [61.7132,   29.3968], // fix #36
   [41.6724,  -86.5082], // fix #38
+  [27.9881,   86.9253], // Mount Everest
 ]) {
   urban_geojson.features.push({
     properties: {
