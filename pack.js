@@ -94,6 +94,7 @@ for(const [lat, lon] of [
   [61.7132,   29.3968], // fix #36
   [41.6724,  -86.5082], // fix #38
   [27.9881,   86.9253], // Mount Everest
+  [47.3525,  -102.6214], // Dunn Center, North Dakota
 ]) {
   urban_geojson.features.push({
     properties: {
