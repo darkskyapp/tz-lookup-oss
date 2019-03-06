@@ -101,6 +101,17 @@ describe("tzlookup", function() {
     [[ 41.6724,  -86.5082], "America/Indiana/Indianapolis"], // #38
     [[ 27.9881,   86.9253], "Asia/Shanghai"], // Mount Everest
     [[ 47.3525, -102.6214], "America/Denver"], // Dunn Center, North Dakota
+    [[ 20.5104,  -86.9493], "America/Cancun"], // #40 (San Miguel de Cozumel)
+    [[ 19.5786,  -88.0453], "America/Cancun"], // #40 (Felipe Carrillo Puerto)
+    [[ 21.2333,  -86.7333], "America/Cancun"], // #40 (Isla Mujeres)
+    [[ 18.5036,  -88.3053], "America/Cancun"], // #40 (Chetumal)
+    [[ 21.1606,  -86.8475], "America/Cancun"], // #40 (Cancún)
+    [[ 19.7500,  -88.7000], "America/Cancun"], // #40 (José María Morelos)
+    [[ 21.1000,  -87.4833], "America/Cancun"], // #40 (Kantunilkín)
+    [[ 20.6275,  -87.0811], "America/Cancun"], // #40 (Playa del Carmen)
+    [[ 20.2119,  -87.4658], "America/Cancun"], // #40 (Tulum)
+    [[ 18.6769,  -88.3953], "America/Cancun"], // #40 (Bacalar)
+    [[ 20.8536,  -86.8753], "America/Cancun"], // #40 (Puerto Morelos)
 
     // Check that we resolve conflicting zones adequately.
     [[ 43.8250,   87.6000], "Asia/Urumqi"],
