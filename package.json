@@ -23,5 +23,5 @@
   "scripts": {
     "test": "mocha"
   },
-  "version": "6.1.16"
+  "version": "6.1.17"
 }
