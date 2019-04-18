@@ -112,6 +112,8 @@ describe("tzlookup", function() {
     [[ 20.2119,  -87.4658], "America/Cancun"], // #40 (Tulum)
     [[ 18.6769,  -88.3953], "America/Cancun"], // #40 (Bacalar)
     [[ 20.8536,  -86.8753], "America/Cancun"], // #40 (Puerto Morelos)
+    [[-31.6750,  128.8831], "Australia/Eucla"], // # 45
+    [[-31.9567,  141.4678], "Australia/Broken_Hill"], // #46
 
     // Check that we resolve conflicting zones adequately.
     [[ 43.8250,   87.6000], "Asia/Urumqi"],
