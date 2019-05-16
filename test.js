@@ -114,6 +114,17 @@ describe("tzlookup", function() {
     [[ 20.8536,  -86.8753], "America/Cancun"], // #40 (Puerto Morelos)
     [[-31.6750,  128.8831], "Australia/Eucla"], // # 45
     [[-31.9567,  141.4678], "Australia/Broken_Hill"], // #46
+    [[54.71143,  -7.70700], "Europe/London"], // #47 (Northern Ireland)
+    [[54.59160,  -7.73399], "Europe/London"], // #47 
+    [[54.15168,  -7.35706], "Europe/London"], // #47
+    [[54.20568,  -6.73835], "Europe/London"], // #47
+    [[54.75062,  -7.56082], "Europe/Dublin"], // #47 (Ireland)
+    [[54.53679,  -7.85138], "Europe/Dublin"], // #47
+    [[54.29158,  -7.87585], "Europe/Dublin"], // #47
+    [[54.39447,  -6.97871], "Europe/Dublin"], // #47
+    [[54.07753,  -6.67391], "Europe/Dublin"], // #47
+    [[45.65039,  -67.5789], "America/Moncton"], // #48
+    [[46.43917,  -67.7449], "America/Moncton"], // #48
 
     // Check that we resolve conflicting zones adequately.
     [[ 43.8250,   87.6000], "Asia/Urumqi"],
