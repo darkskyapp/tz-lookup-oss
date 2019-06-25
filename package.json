@@ -13,7 +13,7 @@
     "timezone",
     "time zone"
   ],
-  "license": "CC0",
+  "license": "CC0-1.0",
   "main": "tz.js",
   "name": "tz-lookup",
   "repository": {
