@@ -123,8 +123,9 @@ describe("tzlookup", function() {
     [[54.29158,  -7.87585], "Europe/Dublin"], // #47
     [[54.39447,  -6.97871], "Europe/Dublin"], // #47
     [[54.07753,  -6.67391], "Europe/Dublin"], // #47
-    [[45.65039,  -67.5789], "America/Moncton"], // #48
-    [[46.43917,  -67.7449], "America/Moncton"], // #48
+    [[ 45.6504,  -67.5789], "America/Moncton"], // #48
+    [[ 46.4392,  -67.7449], "America/Moncton"], // #48
+    [[ 45.3238, -116.5487], "America/Boise"], // #51
 
     // Check that we resolve conflicting zones adequately.
     [[ 43.8250,   87.6000], "Asia/Urumqi"],
