@@ -1,6 +1,6 @@
 #!/bin/bash
 set -ex
-TZ="2019a"
+TZ="2019b"
 
 rm -rf timezones.geojson.zip dist ne_10m_urban_areas.*
 curl -L --retry 3 -C - \
