@@ -15,6 +15,7 @@
   ],
   "license": "CC0-1.0",
   "main": "tz.js",
+  "typings": "tz.d.ts",
   "name": "tz-lookup",
   "repository": {
     "type": "git",
