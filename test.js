@@ -135,6 +135,8 @@ describe("tzlookup", function() {
     [[ 67.9458,   23.6242], "Europe/Stockholm"], // #56 (Muoniovaara)
     [[ 68.0168,   23.4515], "Europe/Stockholm"], // #56 (Ruosteranta)
     [[ 68.1133,   23.3214], "Europe/Stockholm"], // #56 (Kätkesuando)
+    [[ 40.7084, -86.69554], "America/Indiana/Indianapolis"], // #59
+    [[ 41.0523, -86.70629], "America/Indiana/Indianapolis"], // #59
 
     // Check that we resolve conflicting zones adequately.
     [[ 43.8250,   87.6000], "Asia/Urumqi"],
