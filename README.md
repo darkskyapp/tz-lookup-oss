@@ -5,6 +5,8 @@ a location given its latitude and longitude. It works in both the browser and
 in Node.JS, and is very fast and lightweight (~71KB) given what it does. We
 use it in production for [The Dark Sky API][1].
 
+**This library is no longer actively maintained under an Open Source license. Please fork it if you would like to continue development.**
+
 [1]: https://darksky.net/dev/
 
 Usage
