@@ -18,7 +18,7 @@
   "name": "tz-lookup",
   "repository": {
     "type": "git",
-    "url": "git://github.com/darkskyapp/tz-lookup.git"
+    "url": "git://github.com/darkskyapp/tz-lookup-oss.git"
   },
   "scripts": {
     "test": "mocha"
